@@ -1,0 +1,87 @@
+﻿@page
+@model EditModel
+@{
+    ViewData["Title"] = string.IsNullOrWhiteSpace(Model.Node.ID) ? "Create SyncNode" : "Edit SyncNode";
+}
+
+<div class="page-header">
+    <h2>@ViewData["Title"]</h2>
+</div>
+
+<form class="form-horizontal" method="post">
+    <div asp-validation-summary="All"></div>
+    <input asp-for="Node.ID" type="hidden" />
+    <div class="form-group">
+        <label class="col-sm-1 control-label" asp-for="Node.Name"></label>
+        <div class="col-sm-3">
+            <input class="form-control" asp-for="Node.Name" />
+            <span asp-validation-for="Node.Name"></span>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-1 control-label" asp-for="Node.MongoUrl"></label>
+        <div class="col-sm-3">
+            <select class="form-control" asp-items="@(new SelectList(Model.MongoNodes,"Url","Name"))" asp-for="Node.MongoUrl">
+                <option>Please select one</option>
+            </select>
+            <span asp-validation-for="Node.MongoUrl"></span>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-1 control-label" asp-for="Node.DataBase"></label>
+        <div class="col-sm-3">
+            <input class="form-control" asp-for="Node.DataBase" />
+            <span asp-validation-for="Node.DataBase"></span>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-1 control-label" asp-for="Node.Collection"></label>
+        <div class="col-sm-3">
+            <input class="form-control" asp-for="Node.Collection" />
+            <span asp-validation-for="Node.Collection"></span>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-1 control-label" asp-for="Node.ProjectFields"></label>
+        <div class="col-sm-5">
+            <input class="form-control" asp-for="Node.ProjectFields" />
+            <span asp-validation-for="Node.ProjectFields"></span>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-1 control-label" asp-for="Node.EsUrl"></label>
+        <div class="col-sm-3">
+            <select class="form-control" asp-items="@(new SelectList(Model.EsNodes,"Url","Name"))" asp-for="Node.EsUrl">
+                <option>Please select one</option>
+            </select>
+            <span asp-validation-for="Node.EsUrl"></span>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-1 control-label" asp-for="Node.Index"></label>
+        <div class="col-sm-3">
+            <input class="form-control" asp-for="Node.Index" />
+            <span asp-validation-for="Node.Index"></span>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-1 control-label" asp-for="Node.Type"></label>
+        <div class="col-sm-3">
+            <input class="form-control" asp-for="Node.Type" />
+            <span asp-validation-for="Node.Type"></span>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <div class="col-sm-offset-1 col-sm-11">
+            <button class="btn btn-primary" type="submit">Save</button>
+        </div>
+    </div>
+</form>
