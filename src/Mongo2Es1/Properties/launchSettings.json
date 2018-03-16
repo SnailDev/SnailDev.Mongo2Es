@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "Mongo2Es": {
-      "commandName": "Project",
-      "commandLineArgs": "--port 28939 --mongo mongodb://localhost:27017"
-    }
-  }
-}

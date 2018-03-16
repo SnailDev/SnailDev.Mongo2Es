@@ -13,7 +13,7 @@ namespace Mongo2Es
         static void Main(string[] args)
         {
             var arguments = new ConfigurationBuilder().AddCommandLine(args).Build();
-            var port = arguments["port"] ?? "5000";
+            var port = arguments["port"] ?? "9300";
             var mongoUrl = arguments["mongo"] ?? "mongodb://localhost:27017";
 
             // Web
@@ -21,9 +21,9 @@ namespace Mongo2Es
             {
                 var host =
                     WebHost.CreateDefaultBuilder(args)
-                    .UseContentRoot(Path.Combine(Directory.GetCurrentDirectory(), "SyncWeb"))
+                    .UseContentRoot(Directory.GetCurrentDirectory())
                     .UseUrls($"http://localhost:{port}")
-                    .UseStartup<Management.Startup>()
+                    .UseStartup<Startup>()
                     .Build();
 
                 host.Run();

@@ -10,7 +10,7 @@ using System.Collections.Generic;
 using System.Text;
 using Microsoft.Extensions.Configuration;
 
-namespace Mongo2Es.Management
+namespace Mongo2Es
 {
     public class Startup
     {
