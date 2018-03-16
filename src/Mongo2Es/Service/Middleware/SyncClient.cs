@@ -31,27 +31,7 @@ namespace Mongo2Es.Middleware
             {
                 Interval = 10// 5 * 60 * 1000 //; 1
             };
-            nodesRefreshTimer.Elapsed += (sender, args) =>
-            {
-                // nodesRefreshTimer.Interval =  5 * 60 * 1000;
-
-                var nodes = client.GetCollectionData<SyncNode>("Mongo2Es", "SyncNodes");
-
-                var group = nodes.GroupBy(x => x.MongoUrl);
-                foreach (var item in group)
-                {
-                    mongoClientDic.GetOrAdd(item.Key, new MongoClient(item.Key));
-
-                    var nodesInGroup = item.ToList<SyncNode>();
-                    foreach (var node in nodesInGroup)
-                    {
-                        esClientDic.GetOrAdd(node.EsUrl, new EsClient(node.EsUrl));
-                    }
-
-                    nodeGroupsDic.AddOrUpdate(item.Key, nodesInGroup, (key, oldValue) => oldValue = nodesInGroup);
-                }
-            };
-
+            nodesRefreshTimer.Elapsed += (sender, args) => GetNodes();
             nodesRefreshTimer.Disposed += (sender, args) =>
             {
                 Console.WriteLine("nodes更新线程退出");
@@ -60,36 +40,65 @@ namespace Mongo2Es.Middleware
             #endregion
 
             #region syncTimer
-            syncTimer = new System.Timers.Timer
-            {
-                Interval = 5 * 1000 //; 1
-            };
-            syncTimer.Elapsed += (sender, args) =>
-            {
-                //syncTimer.Interval = 5 * 1000;
+            //syncTimer = new System.Timers.Timer
+            //{
+            //    Interval = 5 * 1000 //; 1
+            //};
+            //syncTimer.Elapsed += (sender, args) =>
+            //{
+            //    AllocateTask();
+            //};
 
-                foreach (var client in mongoClientDic)
-                {
-                    ThreadPool.QueueUserWorkItem(ExcuteProcess, client.Value);
-                    //RunProcess(client.Value); // 单线程
-                }
-            };
-
-            syncTimer.Disposed += (sender, args) =>
-            {
-                Console.WriteLine("同步更新线程退出");
-            };
-            syncTimer.Start();
+            //syncTimer.Disposed += (sender, args) =>
+            //{
+            //    Console.WriteLine("同步更新线程退出");
+            //};
+            //syncTimer.Start();
             #endregion
         }
 
-        public void ExcuteProcess(object client)
+        private void GetNodes()
+        {
+            // nodesRefreshTimer.Interval =  5 * 60 * 1000;
+
+            var nodes = client.GetCollectionData<SyncNode>("Mongo2Es", "SyncNodes");
+
+            var group = nodes.GroupBy(x => x.MongoUrl);
+            foreach (var item in group)
+            {
+                mongoClientDic.GetOrAdd(item.Key, new MongoClient(item.Key));
+
+                var nodesInGroup = item.ToList<SyncNode>();
+                foreach (var node in nodesInGroup)
+                {
+                    esClientDic.GetOrAdd(node.EsUrl, new EsClient(node.EsUrl));
+                }
+
+                nodeGroupsDic.AddOrUpdate(item.Key, nodesInGroup, (key, oldValue) => oldValue = nodesInGroup);
+            }
+        }
+
+        private void AllocateTask()
+        {
+            //syncTimer.Interval = 5 * 1000;
+
+            foreach (var client in mongoClientDic)
+            {
+                //ThreadPool.QueueUserWorkItem(ExcuteProcess, client.Value);
+                ExcuteProcess(client.Value); // 单线程
+
+                //Thread thread = new Thread(()=> ExcuteProcess(client.Value));
+                //thread.Name = client.Key;
+            }
+        }
+
+        private void ExcuteProcess(object client)
         {
             var mongoClient = client as MongoClient;
-            var opLogs = mongoClient.GetMongoOpLogs(mongoClient.GetTimestampFromDateTime(DateTime.UtcNow.AddDays(-1)));
             if (nodeGroupsDic.ContainsKey(mongoClient.Url))
             {
                 var nodes = nodeGroupsDic[mongoClient.Url];
+                var opLogs = mongoClient.GetMongoOpLogs(mongoClient.GetTimestampFromDateTime(DateTime.UtcNow.AddDays(-1)));
 
                 foreach (var node in nodes)
                 {
@@ -149,6 +158,34 @@ namespace Mongo2Es.Middleware
             }
 
             return doc;
+        }
+
+        /// <summary>
+        /// 批量插入文档处理
+        /// </summary>
+        /// <param name="docs"></param>
+        /// <param name="projectFields"></param>
+        /// <returns></returns>
+        private IEnumerable<BsonDocument> IBatchDocuemntHandle(IEnumerable<BsonDocument> docs, string projectFields)
+        {
+            var handDocs = new List<BsonDocument>();
+            var fieldsArr = projectFields.Split(",");
+            foreach (var doc in docs)
+            {
+                handDocs.Add(BsonDocument.Parse($"{{'index':{BsonDocument.Parse($"{{'_id':{doc["_id"].ToString()}}}")}}}"));
+
+                var names = doc.Names.ToList();
+                foreach (var name in names)
+                {
+                    if (!fieldsArr.Contains(name))
+                        doc.Remove(name);
+                }
+
+                handDocs.Add(doc);
+            }
+
+
+            return handDocs;
         }
 
         /// <summary>

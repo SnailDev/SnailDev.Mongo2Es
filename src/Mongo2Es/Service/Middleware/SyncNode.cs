@@ -98,6 +98,17 @@ namespace Mongo2Es.Middleware
         [BsonDateTimeOptions(Kind = DateTimeKind.Local)]
         public DateTime? UpdateTime { get; set; }
 
+        /// <summary>
+        /// 操作方式 0|
+        /// </summary>
+        public int OperType { get; set; }
+
+        /// <summary>
+        /// 操作时间
+        /// </summary>
+        [BsonDateTimeOptions(Kind = DateTimeKind.Local)]
+        public DateTime? OperTime { get; set; }
+
         public SyncNode()
         {
             CreateTime = DateTime.Now;
