@@ -102,10 +102,10 @@ namespace Mongo2Es.Mongo
         /// <param name="collectionName"></param>
         /// <param name="filter"></param>
         /// <returns></returns>
-        public IEnumerable<TDocument> GetCollectionData<TDocument>(string dbName, string collectionName, string filter = "{}")
+        public IEnumerable<TDocument> GetCollectionData<TDocument>(string dbName, string collectionName, string filter = "{}", int? limit = null)
         {
             var col = GetCollection<TDocument>(dbName, collectionName);
-            return col.Find(BsonDocument.Parse(filter)).ToEnumerable();
+            return col.Find(BsonDocument.Parse(filter)).Limit(limit).ToEnumerable();
         }
 
         /// <summary>
@@ -178,17 +178,18 @@ namespace Mongo2Es.Mongo
         /// <summary>
         /// 获取Oplogs
         /// </summary>
+        /// <param name="ns"></param>
         /// <param name="timestamp"></param>
         /// <returns></returns>
-        public IEnumerable<BsonDocument> GetMongoOpLogs(BsonTimestamp timestamp = null)
+        public IEnumerable<BsonDocument> GetMongoOpLogs(string ns, long? timestamp = null)
         {
             var db = client.GetDatabase("local");
             var collection = db.GetCollection<BsonDocument>("oplog.rs");
 
             var op = BsonDocument.Parse($"{{$in: ['i','u','d']}}");
             timestamp = timestamp ?? GetTimestampFromDateTime(DateTime.UtcNow);
-            var ts = BsonDocument.Parse($"{{$gt: { timestamp } }}");
-            var filterFunc = BsonDocument.Parse($"{{'op':{op}}}"); //,'ts':{ts}
+            var ts = BsonDocument.Parse($"{{$gt: new Timestamp({timestamp},1)}}");
+            var filterFunc = BsonDocument.Parse($"{{'ns':{ns},'op':{op},'ts':{ts}}}");
             var sortFunc = BsonDocument.Parse("{$natural: 1}");
 
             return collection.Find(filterFunc).Sort(sortFunc).ToEnumerable();
@@ -199,9 +200,9 @@ namespace Mongo2Es.Mongo
         /// </summary>
         /// <param name="time"></param>
         /// <returns></returns>
-        public BsonTimestamp GetTimestampFromDateTime(DateTime time)
+        public long GetTimestampFromDateTime(DateTime time)
         {
-            return new BsonTimestamp((int)(time - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalMilliseconds + 18000000);
+            return (long)(time - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalSeconds;
         }
     }
 }

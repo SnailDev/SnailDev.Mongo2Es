@@ -99,19 +99,66 @@ namespace Mongo2Es.Middleware
         public DateTime? UpdateTime { get; set; }
 
         /// <summary>
-        /// 操作方式 0|
+        /// 同步状态
+        /// </summary>
+        public SyncStatus Status { get; set; }
+
+        /// <summary>
+        /// 操作方式 0|scan, 1|tail
         /// </summary>
         public int OperType { get; set; }
 
         /// <summary>
-        /// 操作时间
+        /// 操作标记
         /// </summary>
-        [BsonDateTimeOptions(Kind = DateTimeKind.Local)]
-        public DateTime? OperTime { get; set; }
+        public string OperScanSign { get; set; }
+        public long OperTailSign { get; set; }
 
         public SyncNode()
         {
             CreateTime = DateTime.Now;
+            Status = SyncStatus.WaitForScan;
         }
+    }
+
+    /// <summary>
+    /// 同步状态
+    /// </summary>
+    public enum SyncStatus
+    {
+        /// <summary>
+        /// 等待全表扫描
+        /// </summary>
+        WaitForScan,
+
+        /// <summary>
+        /// 执行全表扫描
+        /// </summary>
+        ProcessScan,
+
+        /// <summary>
+        /// 全部扫描异常
+        /// </summary>
+        ScanException,
+
+        /// <summary>
+        /// 完成全表扫描
+        /// </summary>
+        CompletedScan,
+
+        /// <summary>
+        /// 等待增量同步
+        /// </summary>
+        WaitForTail,
+
+        /// <summary>
+        /// 增量同步中
+        /// </summary>
+        ProcessTail,
+
+        /// <summary>
+        /// 增量同步失败
+        /// </summary>
+        TailException,
     }
 }

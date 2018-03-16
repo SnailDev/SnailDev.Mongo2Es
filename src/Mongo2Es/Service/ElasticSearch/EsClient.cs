@@ -55,15 +55,15 @@ namespace Mongo2Es.ElasticSearch
         /// <param name="type"></param>
         /// <param name="docs"></param>
         /// <returns></returns>
-        public bool InsertBatchDocument(string index, string type, IEnumerable<BsonDocument> docs)
+        public bool InsertBatchDocument(string index, string type, IEnumerable<string> docs)
         {
             bool flag = false;
 
             try
             {
-                var resStr = client.Bulk<StringResponse>(index, type, PostData.String(docs.ToJson()));
+                var resStr = client.Bulk<StringResponse>(index, type, PostData.MultiJson(docs));
                 var resObj = JObject.Parse(resStr.Body);
-                if ((int)resObj["_shards"]["successful"] > 0)
+                if (!(bool)resObj["errors"])
                 {
                     flag = true;
                 }
