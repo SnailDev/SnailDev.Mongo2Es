@@ -20,54 +20,67 @@
 </div>
 <div class="table-responsive">
     <form method="post">
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    @*<th>ID</th>*@
-                    <th>Name</th>
-                    <th>MongoUrl</th>
-                    <th>DB&Collection</th>
-                    <th>ElasticUrl</th>
-                    <th>Index&Type</th>
-                    <th>CreateTime</th>
-                    @*<th>UpdateTime</th>*@
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                @if (Model.Nodes.Count > 0)
-                {
-                    @foreach (var node in Model.Nodes)
-                    {
+
+        @foreach (var node in Model.Nodes)
+        {
+            <div class="panel panel-primary">
+                <div class="panel-heading">@node.Name</div>
+                <table class="table">
+                    <tbody>
                         <tr>
-                            @*<td>@node.ID</td>*@
-                            <td>@node.Name</td>
-                            <td>@node.MongoUrl</td>
-                            <td>@($"{node.DataBase}.{node.Collection}")</td>
-                            <td>@node.EsUrl</td>
-                            <td>@($"{node.Index}.{node.Type}")</td>
-                            <td>@node.CreateTime.ToString("yyyy-MM-dd HH:mm:ss")</td>
-                            @*<td>@node.UpdateTime?.ToString("yyyy-MM-dd HH:mm:ss")</td>*@
                             <td>
-                                <a class="btn btn-sm btn-success" asp-page="./Edit" asp-route-id="@node.ID">edit</a>
-                                <button class="btn btn-sm btn-danger" type="submit" onclick="return confirm('Are you sure you want to delete this item?');"
-                                        asp-page-handler="delete" asp-route-id="@node.ID">
-                                    delete
-                                </button>
+                                MongoUrl: @node.MongoUrl
+                            </td>
+                            <td>
+                                ElasticUrl: @node.EsUrl
                             </td>
                         </tr>
-                    }
-                }
-                else
-                {
-                    <tr>
-                        <td colspan="6">There is No Data.</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+                        <tr>
+                            <td>
+                                DataBase: @node.DataBase
+                            </td>
+                            <td>
+                                Index: @node.Index
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                Collection: @node.Collection
+                            </td>
+                            <td>
+                                Type: @node.Type
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                @Model.SyncSwitchDic.GetValueOrDefault(node.Switch)  / @Model.SyncStatusDic.GetValueOrDefault(node.Status)
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-warning" type="submit" onclick="return confirm('Are you sure you want to do this operation?');"
+                                        asp-page-handler="switch" asp-route-id="@node.ID" asp-route-flag="@node.Switch">
+                                    @(node.Switch == Middleware.SyncSwitch.Stop ? "开启" : "停止")
+                                </button>
+
+                                @if (node.Switch == Middleware.SyncSwitch.Stop)
+                                {
+                                    <a class="btn btn-sm btn-success" asp-page="./Edit" asp-route-id="@node.ID">编辑</a>
+                                    <button class="btn btn-sm btn-danger" type="submit" onclick="return confirm('Are you sure you want to delete this item?');"
+                                            asp-page-handler="delete" asp-route-id="@node.ID">
+                                        删除
+                                    </button>
+                                }
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+
+
+        }
+
+
 
         <a class="btn btn-primary" asp-page="./Edit">Create</a>
     </form>
 </div>
-

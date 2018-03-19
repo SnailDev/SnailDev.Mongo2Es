@@ -16,12 +16,8 @@ namespace Mongo2Es.Middleware
         private Mongo.MongoClient client;
         private readonly string database = "Mongo2Es";
         private readonly string collection = "SyncNode";
-        //private IEnumerable<SyncNode> nodes;
-        //private System.Timers.Timer syncTimer;
         private System.Timers.Timer nodesRefreshTimer;
         private ConcurrentDictionary<string, SyncNode> tailNodesDic = new ConcurrentDictionary<string, SyncNode>();
-        //private ConcurrentDictionary<string, EsClient> esClientDic = new ConcurrentDictionary<string, EsClient>();
-        //private ConcurrentDictionary<string, MongoClient> mongoClientDic = new ConcurrentDictionary<string, MongoClient>();
 
         public SyncClient(string mongoUrl)
         {
@@ -30,82 +26,43 @@ namespace Mongo2Es.Middleware
 
         public void Run()
         {
-            #region nodesRefreshTimer
             nodesRefreshTimer = new System.Timers.Timer
             {
-                Interval = 10 * 1000 //; 1
+                Interval = 30 * 1000
             };
-            nodesRefreshTimer.Elapsed += (sender, args) => AllocateTask();
+            nodesRefreshTimer.Elapsed += (sender, args) =>
+            {
+                var nodes = client.GetCollectionData<SyncNode>(database, collection);
+
+                var scanNodes = nodes.Where(x => x.Status == SyncStatus.WaitForScan && x.Switch == SyncSwitch.Run);
+                foreach (var node in scanNodes)
+                {
+                    ThreadPool.QueueUserWorkItem(ExcuteScanProcess, node);
+                }
+
+                var tailNodes = nodes.Where(x => x.Status == SyncStatus.WaitForTail && x.Switch == SyncSwitch.Run);
+                var tailIds = tailNodes.Select(x => x.ID);
+
+                foreach (var item in tailNodes)
+                {
+                    if (!tailNodesDic.ContainsKey(item.ID))
+                    {
+                        ThreadPool.QueueUserWorkItem(ExcuteTailProcess, item);
+                    }
+
+                    tailNodesDic.AddOrUpdate(item.ID, item, (key, oldValue) => oldValue = item);
+                }
+
+                foreach (var key in tailNodesDic.Keys.Except(tailIds))
+                {
+                    tailNodesDic.Remove(key, out SyncNode node);
+                }
+            };
             nodesRefreshTimer.Disposed += (sender, args) =>
             {
                 Console.WriteLine("nodes更新线程退出");
             };
             nodesRefreshTimer.Start();
-            #endregion
-
-            #region syncTimer
-            //syncTimer = new System.Timers.Timer
-            //{
-            //    Interval = 5 * 1000 //; 1
-            //};
-            //syncTimer.Elapsed += (sender, args) =>
-            //{
-            //    AllocateTask();
-            //};
-
-            //syncTimer.Disposed += (sender, args) =>
-            //{
-            //    Console.WriteLine("同步更新线程退出");
-            //};
-            //syncTimer.Start();
-            #endregion
-
-            //// 分配工作
-            //AllocateTask();
-        }
-
-        private void RefreshNodes()
-        {
-            // nodesRefreshTimer.Interval =  5 * 60 * 1000;
-
-            //nodes = client.GetCollectionData<SyncNode>("Mongo2Es", "SyncNodes");
-
-            //var group = nodes.GroupBy(x => x.MongoUrl);
-            //foreach (var item in group)
-            //{
-            //    mongoClientDic.GetOrAdd(item.Key, new Mongo.MongoClient(item.Key));
-
-            //    var nodesInGroup = item.ToList<SyncNode>();
-            //    foreach (var node in nodesInGroup)
-            //    {
-            //        esClientDic.GetOrAdd(node.EsUrl, new EsClient(node.EsUrl));
-            //    }
-            //}
-        }
-
-        /// <summary>
-        /// 分配任务
-        /// </summary>
-        private void AllocateTask()
-        {
-            var nodes = client.GetCollectionData<SyncNode>(database, collection);
-
-            var scanNodes = nodes.Where(x => x.Status == SyncStatus.WaitForScan);
-            foreach (var node in scanNodes)
-            {
-                ThreadPool.QueueUserWorkItem(ExcuteScanProcess, node);
-            }
-
-            var tailNodes = nodes.Where(x => x.Status == SyncStatus.WaitForTail);
-            foreach (var item in tailNodes)
-            {
-                if (!tailNodesDic.ContainsKey(item.ID))
-                {
-                    ThreadPool.QueueUserWorkItem(ExcuteTailProcess, item);
-                }
-
-                tailNodesDic.AddOrUpdate(item.ID, item, (key, oldValue) => oldValue = item);
-            }
         }
 
         /// <summary>
@@ -140,6 +97,7 @@ namespace Mongo2Es.Middleware
                     {
                         Console.WriteLine("文档写入ES失败");
                         node.Status = SyncStatus.ScanException;
+                        node.Switch = SyncSwitch.Stop;
                         client.UpdateCollectionData<SyncNode>(database, collection, node);
                         return;
                     }
@@ -151,6 +109,7 @@ namespace Mongo2Es.Middleware
             catch (Exception ex)
             {
                 node.Status = SyncStatus.ScanException;
+                node.Switch = SyncSwitch.Stop;
                 client.UpdateCollectionData<SyncNode>(database, collection, node);
 
                 Console.WriteLine(ex);
@@ -172,13 +131,8 @@ namespace Mongo2Es.Middleware
                 node.Status = SyncStatus.ProcessTail;
                 client.UpdateCollectionData<SyncNode>(database, collection, node);
 
-                while(true)
+                while (true)
                 {
-                    if (!tailNodesDic.ContainsKey(node.ID))
-                    {
-                        break;
-                    }
-
                     using (var cursor = mongoClient.TailMongoOpLogs(node.OperTailSign))
                     {
                         foreach (var opLog in cursor.ToEnumerable())
@@ -212,9 +166,21 @@ namespace Mongo2Es.Middleware
                                     break;
                             }
 
-                            node.OperTailSign = opLog["ts"].AsBsonTimestamp.Value;
+                            node.OperTailSign = opLog["ts"].AsBsonTimestamp.Timestamp;
                             client.UpdateCollectionData<SyncNode>(database, collection, node);
                         }
+                    }
+
+                    if (!tailNodesDic.TryGetValue(node.ID, out node))
+                    {
+                        break;
+                    }
+
+                    if (node.Switch == 0)
+                    {
+                        node.Switch = SyncSwitch.Stop;
+                        client.UpdateCollectionData<SyncNode>(database, collection, node);
+                        break;
                     }
                 }
 
@@ -250,6 +216,7 @@ namespace Mongo2Es.Middleware
             catch (Exception ex)
             {
                 node.Status = SyncStatus.TailException;
+                node.Switch = SyncSwitch.Stop;
                 client.UpdateCollectionData<SyncNode>(database, collection, node);
 
                 Console.WriteLine(ex);
@@ -257,7 +224,7 @@ namespace Mongo2Es.Middleware
         }
 
         /// <summary>
-        /// 增量同步
+        /// 增量同步(备用)
         /// </summary>
         /// <param name="obj"></param>
         private void ExcuteTailProcessOther(object obj)

@@ -4,6 +4,7 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Text;
 
 namespace Mongo2Es.Middleware
@@ -99,6 +100,11 @@ namespace Mongo2Es.Middleware
         public DateTime? UpdateTime { get; set; }
 
         /// <summary>
+        /// 2|运行，1|停止中，0|停止
+        /// </summary>
+        public SyncSwitch Switch { get; set; }
+
+        /// <summary>
         /// 同步状态
         /// </summary>
         public SyncStatus Status { get; set; }
@@ -129,36 +135,67 @@ namespace Mongo2Es.Middleware
         /// <summary>
         /// 等待全表扫描
         /// </summary>
+        [Description("等待全表扫描")]
         WaitForScan,
 
         /// <summary>
         /// 执行全表扫描
         /// </summary>
+        [Description("执行全表扫描")]
         ProcessScan,
 
         /// <summary>
         /// 全部扫描异常
         /// </summary>
+        [Description("全部扫描异常")]
         ScanException,
 
         /// <summary>
         /// 完成全表扫描
         /// </summary>
+        [Description("完成全表扫描")]
         CompletedScan,
 
         /// <summary>
         /// 等待增量同步
         /// </summary>
+        [Description("等待增量同步")]
         WaitForTail,
 
         /// <summary>
         /// 增量同步中
         /// </summary>
+        [Description("增量同步中")]
         ProcessTail,
 
         /// <summary>
         /// 增量同步失败
         /// </summary>
+        [Description("增量同步失败")]
         TailException,
+    }
+
+    /// <summary>
+    /// 同步开关  2|运行，1|停止中，0|停止
+    /// </summary>
+    public enum SyncSwitch
+    {
+        /// <summary>
+        /// 停止
+        /// </summary>
+        [Description("停止")]
+        Stop = 0,
+
+        /// <summary>
+        /// 停止中
+        /// </summary>
+        [Description("停止中")]
+        Stoping =1,
+
+        /// <summary>
+        /// 运行
+        /// </summary>
+        [Description("运行")]
+        Run = 2
     }
 }
