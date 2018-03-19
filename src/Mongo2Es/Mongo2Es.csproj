@@ -18,6 +18,8 @@
     <PackageReference Include="Microsoft.AspNetCore.All" Version="2.0.6" />
     <PackageReference Include="mongocsharpdriver" Version="2.5.0" />
     <PackageReference Include="Newtonsoft.Json" Version="11.0.1" />
+    <PackageReference Include="NLog.Extensions.Logging" Version="1.0.0-rtm-rc7" />
+    <PackageReference Include="NLog.MongoDB.NetCore" Version="1.0.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -25,6 +27,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="nlog.config" />
     <None Include="wwwroot\css\site.css" />
     <None Include="wwwroot\css\site.min.css" />
     <None Include="wwwroot\favicon.ico" />
