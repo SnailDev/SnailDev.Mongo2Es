@@ -1,6 +1,7 @@
 ﻿using Mongo2Es.ElasticSearch;
 using Mongo2Es.Mongo;
 using MongoDB.Bson;
+using MongoDB.Driver;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -12,18 +13,19 @@ namespace Mongo2Es.Middleware
 {
     public class SyncClient
     {
-        private MongoClient client;
+        private Mongo.MongoClient client;
         private readonly string database = "Mongo2Es";
         private readonly string collection = "SyncNode";
         //private IEnumerable<SyncNode> nodes;
         //private System.Timers.Timer syncTimer;
         private System.Timers.Timer nodesRefreshTimer;
+        private ConcurrentDictionary<string, SyncNode> tailNodesDic = new ConcurrentDictionary<string, SyncNode>();
         //private ConcurrentDictionary<string, EsClient> esClientDic = new ConcurrentDictionary<string, EsClient>();
         //private ConcurrentDictionary<string, MongoClient> mongoClientDic = new ConcurrentDictionary<string, MongoClient>();
 
         public SyncClient(string mongoUrl)
         {
-            this.client = new MongoClient(mongoUrl);
+            this.client = new Mongo.MongoClient(mongoUrl);
         }
 
         public void Run()
@@ -71,7 +73,7 @@ namespace Mongo2Es.Middleware
             //var group = nodes.GroupBy(x => x.MongoUrl);
             //foreach (var item in group)
             //{
-            //    mongoClientDic.GetOrAdd(item.Key, new MongoClient(item.Key));
+            //    mongoClientDic.GetOrAdd(item.Key, new Mongo.MongoClient(item.Key));
 
             //    var nodesInGroup = item.ToList<SyncNode>();
             //    foreach (var node in nodesInGroup)
@@ -95,9 +97,14 @@ namespace Mongo2Es.Middleware
             }
 
             var tailNodes = nodes.Where(x => x.Status == SyncStatus.WaitForTail);
-            foreach (var node in tailNodes)
+            foreach (var item in tailNodes)
             {
-                ThreadPool.QueueUserWorkItem(ExcuteTailProcess, node);
+                if (!tailNodesDic.ContainsKey(item.ID))
+                {
+                    ThreadPool.QueueUserWorkItem(ExcuteTailProcess, item);
+                }
+
+                tailNodesDic.AddOrUpdate(item.ID, item, (key, oldValue) => oldValue = item);
             }
         }
 
@@ -108,7 +115,7 @@ namespace Mongo2Es.Middleware
         private void ExcuteScanProcess(object obj)
         {
             var node = obj as SyncNode;
-            var mongoClient = new MongoClient(node.MongoUrl);
+            var mongoClient = new Mongo.MongoClient(node.MongoUrl);
             var esClient = new EsClient(node.EsUrl);
 
             try
@@ -157,7 +164,106 @@ namespace Mongo2Es.Middleware
         private void ExcuteTailProcess(object obj)
         {
             var node = obj as SyncNode;
-            var mongoClient = new MongoClient(node.MongoUrl);
+            var mongoClient = new Mongo.MongoClient(node.MongoUrl);
+            var esClient = new EsClient(node.EsUrl);
+
+            try
+            {
+                node.Status = SyncStatus.ProcessTail;
+                client.UpdateCollectionData<SyncNode>(database, collection, node);
+
+                while(true)
+                {
+                    if (!tailNodesDic.ContainsKey(node.ID))
+                    {
+                        break;
+                    }
+
+                    using (var cursor = mongoClient.TailMongoOpLogs(node.OperTailSign))
+                    {
+                        foreach (var opLog in cursor.ToEnumerable())
+                        {
+                            switch (opLog["op"].AsString)
+                            {
+                                case "i":
+                                    var iid = opLog["o"]["_id"].ToString();
+                                    var idoc = IDocuemntHandle(opLog["o"].AsBsonDocument, node.ProjectFields);
+                                    if (idoc.Names.Count() > 0 && esClient.InsertDocument(node.Index, node.Type, iid, idoc))
+                                        Console.WriteLine("文档写入ES成功");
+                                    else
+                                        Console.WriteLine("文档写入ES失败");
+                                    break;
+                                case "u":
+                                    var uid = opLog["o2"]["_id"].ToString();
+                                    var udoc = UDocuemntHandle(opLog["o"].AsBsonDocument, node.ProjectFields);
+                                    if (udoc.Names.Count() > 0 && esClient.UpdateDocument(node.Index, node.Type, uid, udoc))
+                                        Console.WriteLine("文档更新ES成功");
+                                    else
+                                        Console.WriteLine("文档更新ES失败");
+                                    break;
+                                case "d":
+                                    var did = opLog["o"]["_id"].ToString();
+                                    if (esClient.DeleteDocument(node.Index, node.Type, did))
+                                        Console.WriteLine("文档删除ES成功");
+                                    else
+                                        Console.WriteLine("文档删除ES失败");
+                                    break;
+                                default:
+                                    break;
+                            }
+
+                            node.OperTailSign = opLog["ts"].AsBsonTimestamp.Value;
+                            client.UpdateCollectionData<SyncNode>(database, collection, node);
+                        }
+                    }
+                }
+
+                #region 优化
+                //while (opLogs.Count() > 0)
+                //{
+                //    var iopLogs = opLogs.Where(x => x["op"].AsString == "i");
+                //    if (iopLogs.Count() > 0)
+                //    {
+                //        if (esClient.InsertBatchDocument(node.Index, node.Type, IBatchDocuemntHandle(iopLogs, node.ProjectFields)))
+                //        {
+                //            Console.WriteLine("文档写入ES成功");
+                //        }
+                //        else
+                //        {
+                //            Console.WriteLine("文档写入ES失败");
+                //            node.Status = SyncStatus.TailException;
+                //            client.UpdateCollectionData<SyncNode>(database, collection, node);
+                //            return;
+                //        }
+                //    }
+
+                //    var dopLogs = opLogs.Where(x => x["op"].AsString == "d");
+
+                //    var uopLogs = opLogs.Where(x => x["op"].AsString == "u");
+                //    foreach (var log in uopLogs)
+                //    {
+
+                //    }
+                //} 
+                #endregion         
+            }
+            catch (Exception ex)
+            {
+                node.Status = SyncStatus.TailException;
+                client.UpdateCollectionData<SyncNode>(database, collection, node);
+
+                Console.WriteLine(ex);
+            }
+        }
+
+        /// <summary>
+        /// 增量同步
+        /// </summary>
+        /// <param name="obj"></param>
+        private void ExcuteTailProcessOther(object obj)
+        {
+            var node = obj as SyncNode;
+            var mongoClient = new Mongo.MongoClient(node.MongoUrl);
             var esClient = new EsClient(node.EsUrl);
 
             try
@@ -166,6 +272,35 @@ namespace Mongo2Es.Middleware
                 node.Status = SyncStatus.ProcessTail;
                 node.OperTailSign = client.GetTimestampFromDateTime(DateTime.UtcNow);
                 client.UpdateCollectionData<SyncNode>(database, collection, node);
+
+                #region 优化
+                //while (opLogs.Count() > 0)
+                //{
+                //    var iopLogs = opLogs.Where(x => x["op"].AsString == "i");
+                //    if (iopLogs.Count() > 0)
+                //    {
+                //        if (esClient.InsertBatchDocument(node.Index, node.Type, IBatchDocuemntHandle(iopLogs, node.ProjectFields)))
+                //        {
+                //            Console.WriteLine("文档写入ES成功");
+                //        }
+                //        else
+                //        {
+                //            Console.WriteLine("文档写入ES失败");
+                //            node.Status = SyncStatus.TailException;
+                //            client.UpdateCollectionData<SyncNode>(database, collection, node);
+                //            return;
+                //        }
+                //    }
+
+                //    var dopLogs = opLogs.Where(x => x["op"].AsString == "d");
+
+                //    var uopLogs = opLogs.Where(x => x["op"].AsString == "u");
+                //    foreach (var log in uopLogs)
+                //    {
+
+                //    }
+                //} 
+                #endregion
 
                 foreach (var opLog in opLogs)
                 {
@@ -200,10 +335,10 @@ namespace Mongo2Es.Middleware
                 }
 
                 node.Status = SyncStatus.WaitForTail;
-              
+
                 client.UpdateCollectionData<SyncNode>(database, collection, node);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 node.Status = SyncStatus.TailException;
                 client.UpdateCollectionData<SyncNode>(database, collection, node);
@@ -233,12 +368,48 @@ namespace Mongo2Es.Middleware
         }
 
         /// <summary>
+        /// 插入文档处理
+        /// </summary>
+        /// <param name="doc"></param>
+        /// <param name="projectFields"></param>
+        /// <returns></returns>
+        private List<string> IDocuemntHandle(IEnumerable<BsonDocument> docs, string projectFields)
+        {
+            var handDocs = new List<string>();
+            var fieldsArr = projectFields.Split(",");
+            foreach (var doc in docs)
+            {
+                var _doc = doc["o"].AsBsonDocument;
+                handDocs.Add(new
+                {
+                    index = new
+                    {
+                        _id = _doc["_id"].ToString()
+                    }
+                }.ToJson());
+
+                var names = _doc.Names.ToList();
+                foreach (var name in names)
+                {
+                    if (!fieldsArr.Contains(name))
+                        _doc.Remove(name);
+                }
+
+                if (_doc.Names.Count() > 0)
+                    handDocs.Add(_doc.ToJson());
+            }
+
+
+            return handDocs;
+        }
+
+        /// <summary>
         /// 批量插入文档处理
         /// </summary>
         /// <param name="docs"></param>
         /// <param name="projectFields"></param>
         /// <returns></returns>
-        private IEnumerable<string> IBatchDocuemntHandle(IEnumerable<BsonDocument> docs, string projectFields)
+        private List<string> IBatchDocuemntHandle(IEnumerable<BsonDocument> docs, string projectFields)
         {
             var handDocs = new List<string>();
             var fieldsArr = projectFields.Split(",");

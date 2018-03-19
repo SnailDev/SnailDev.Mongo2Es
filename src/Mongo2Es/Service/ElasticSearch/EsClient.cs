@@ -51,13 +51,44 @@ namespace Mongo2Es.ElasticSearch
         /// <summary>
         /// 批量插入文档
         /// </summary>
+        /// <param name="docs"></param>
+        /// <returns></returns>
+        public bool InsertBatchDocument(IEnumerable<string> docs)
+        {
+            bool flag = false;
+
+            try
+            {
+                var resStr = client.Bulk<StringResponse>(PostData.MultiJson(docs));
+                var resObj = JObject.Parse(resStr.Body);
+                if (!(bool)resObj["errors"])
+                {
+                    flag = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+            }
+
+            return flag;
+        }
+
+        /// <summary>
+        /// 批量插入文档
+        /// </summary>
         /// <param name="index"></param>
         /// <param name="type"></param>
         /// <param name="docs"></param>
         /// <returns></returns>
-        public bool InsertBatchDocument(string index, string type, IEnumerable<string> docs)
+        public bool InsertBatchDocument(string index, string type, List<string> docs)
         {
             bool flag = false;
+            if (docs.Count < 1)
+            {
+                flag = true;
+                return flag;
+            }
 
             try
             {

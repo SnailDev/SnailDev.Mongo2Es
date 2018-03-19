@@ -5,6 +5,8 @@ VisualStudioVersion = 15.0.27004.2002
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Mongo2Es", "Mongo2Es\Mongo2Es.csproj", "{8E38C40D-7046-4B35-A635-D9D92B2C7CDE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mongo2Es.Tests", "Mongo2Es.Tests\Mongo2Es.Tests.csproj", "{82050A96-C195-46B7-BB3E-FEC45276D36B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{8E38C40D-7046-4B35-A635-D9D92B2C7CDE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8E38C40D-7046-4B35-A635-D9D92B2C7CDE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8E38C40D-7046-4B35-A635-D9D92B2C7CDE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{82050A96-C195-46B7-BB3E-FEC45276D36B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{82050A96-C195-46B7-BB3E-FEC45276D36B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{82050A96-C195-46B7-BB3E-FEC45276D36B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{82050A96-C195-46B7-BB3E-FEC45276D36B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

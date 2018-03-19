@@ -156,20 +156,18 @@ namespace Mongo2Es.Mongo
         /// <summary>
         /// 获取Oplogs
         /// </summary>
-        /// <param name="dbName"></param>
-        /// <param name="collectionName"></param>
+        /// <param name="ns"></param>
         /// <param name="timestamp"></param>
         /// <returns></returns>
-        public IEnumerable<BsonDocument> GetMongoOpLogs(string dbName, string collectionName, BsonTimestamp timestamp = null)
+        public IEnumerable<BsonDocument> GetMongoOpLogs(string ns, long? timestamp = null)
         {
             var db = client.GetDatabase("local");
             var collection = db.GetCollection<BsonDocument>("oplog.rs");
 
-            var ns = $"{dbName}.{collectionName}";
             var op = BsonDocument.Parse($"{{$in: ['i','u','d']}}");
-            timestamp = timestamp ?? new BsonTimestamp((int)(DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalMilliseconds + 18000000);
-            var ts = BsonDocument.Parse($"{{$gt: { timestamp } }}");
-            var filterFunc = BsonDocument.Parse($"{{'ns':'{ns}','op':{op},'ts':{ts}}}");
+            timestamp = timestamp ?? GetTimestampFromDateTime(DateTime.UtcNow);
+            var ts = BsonDocument.Parse($"{{$gte: new Timestamp({timestamp},1)}}");
+            var filterFunc = BsonDocument.Parse($"{{'ns':{ns},'op':{op},'ts':{ts}}}");
             var sortFunc = BsonDocument.Parse("{$natural: 1}");
 
             return collection.Find(filterFunc).Sort(sortFunc).ToEnumerable();
@@ -181,18 +179,23 @@ namespace Mongo2Es.Mongo
         /// <param name="ns"></param>
         /// <param name="timestamp"></param>
         /// <returns></returns>
-        public IEnumerable<BsonDocument> GetMongoOpLogs(string ns, long? timestamp = null)
+        public IAsyncCursor<BsonDocument> TailMongoOpLogs(long? timestamp = null)
         {
             var db = client.GetDatabase("local");
             var collection = db.GetCollection<BsonDocument>("oplog.rs");
 
             var op = BsonDocument.Parse($"{{$in: ['i','u','d']}}");
             timestamp = timestamp ?? GetTimestampFromDateTime(DateTime.UtcNow);
-            var ts = BsonDocument.Parse($"{{$gt: new Timestamp({timestamp},1)}}");
-            var filterFunc = BsonDocument.Parse($"{{'ns':{ns},'op':{op},'ts':{ts}}}");
+            var ts = BsonDocument.Parse($"{{$gte: new Timestamp({timestamp},1)}}");
+            var filterFunc = BsonDocument.Parse($"{{'op':{op},'ts':{ts}}}");
             var sortFunc = BsonDocument.Parse("{$natural: 1}");
 
-            return collection.Find(filterFunc).Sort(sortFunc).ToEnumerable();
+            var options = new FindOptions<BsonDocument>
+            {
+                // Our cursor is a tailable cursor and informs the server to await
+                CursorType = CursorType.TailableAwait
+            };
+            return collection.FindSync(filterFunc, options);
         }
 
         /// <summary>
