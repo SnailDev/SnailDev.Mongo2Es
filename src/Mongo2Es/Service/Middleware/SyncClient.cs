@@ -1,7 +1,9 @@
 ﻿using Mongo2Es.ElasticSearch;
+using Mongo2Es.Log;
 using Mongo2Es.Mongo;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using NLog;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -13,6 +15,7 @@ namespace Mongo2Es.Middleware
 {
     public class SyncClient
     {
+        private static Logger logger = LogManager.GetCurrentClassLogger();
         private Mongo.MongoClient client;
         private readonly string database = "Mongo2Es";
         private readonly string collection = "SyncNode";
@@ -34,13 +37,13 @@ namespace Mongo2Es.Middleware
             {
                 var nodes = client.GetCollectionData<SyncNode>(database, collection);
 
-                var scanNodes = nodes.Where(x => x.Status == SyncStatus.WaitForScan && x.Switch == SyncSwitch.Run);
+                var scanNodes = nodes.Where(x => x.Status == SyncStatus.WaitForScan && x.Switch != SyncSwitch.Stop);
                 foreach (var node in scanNodes)
                 {
                     ThreadPool.QueueUserWorkItem(ExcuteScanProcess, node);
                 }
 
-                var tailNodes = nodes.Where(x => x.Status == SyncStatus.WaitForTail && x.Switch == SyncSwitch.Run);
+                var tailNodes = nodes.Where(x => x.Status == SyncStatus.WaitForTail && x.Switch != SyncSwitch.Stop);
                 var tailIds = tailNodes.Select(x => x.ID);
 
                 foreach (var item in tailNodes)
@@ -60,7 +63,7 @@ namespace Mongo2Es.Middleware
             };
             nodesRefreshTimer.Disposed += (sender, args) =>
             {
-                Console.WriteLine("nodes更新线程退出");
+                logger.Info("nodes更新线程退出");
             };
             nodesRefreshTimer.Start();
         }
@@ -83,7 +86,7 @@ namespace Mongo2Es.Middleware
                 {
                     if (esClient.InsertBatchDocument(node.Index, node.Type, IBatchDocuemntHandle(data, node.ProjectFields)))
                     {
-                        Console.WriteLine("文档写入ES成功");
+                        LogUtil.LogInfo(logger, $"文档(count:{data.Count()})写入ES成功", node.ID);
 
                         node.Status = SyncStatus.ProcessScan;
                         node.OperScanSign = data.Last()["_id"].ToString();
@@ -95,7 +98,7 @@ namespace Mongo2Es.Middleware
                     }
                     else
                     {
-                        Console.WriteLine("文档写入ES失败");
+                        LogUtil.LogInfo(logger, $"文档(count:{data.Count()})写入ES失败,需手动重置", node.ID);
                         node.Status = SyncStatus.ScanException;
                         node.Switch = SyncSwitch.Stop;
                         client.UpdateCollectionData<SyncNode>(database, collection, node);
@@ -112,7 +115,7 @@ namespace Mongo2Es.Middleware
                 node.Switch = SyncSwitch.Stop;
                 client.UpdateCollectionData<SyncNode>(database, collection, node);
 
-                Console.WriteLine(ex);
+                LogUtil.LogError(logger, ex.ToString(), node.ID);
             }
         }
 
@@ -143,24 +146,24 @@ namespace Mongo2Es.Middleware
                                     var iid = opLog["o"]["_id"].ToString();
                                     var idoc = IDocuemntHandle(opLog["o"].AsBsonDocument, node.ProjectFields);
                                     if (idoc.Names.Count() > 0 && esClient.InsertDocument(node.Index, node.Type, iid, idoc))
-                                        Console.WriteLine("文档写入ES成功");
+                                        LogUtil.LogInfo(logger, $"文档（id:{iid}）写入ES成功", node.ID);
                                     else
-                                        Console.WriteLine("文档写入ES失败");
+                                        LogUtil.LogInfo(logger, $"文档（id:{iid}）写入ES失败", node.ID);
                                     break;
                                 case "u":
                                     var uid = opLog["o2"]["_id"].ToString();
                                     var udoc = UDocuemntHandle(opLog["o"].AsBsonDocument, node.ProjectFields);
                                     if (udoc.Names.Count() > 0 && esClient.UpdateDocument(node.Index, node.Type, uid, udoc))
-                                        Console.WriteLine("文档更新ES成功");
+                                        LogUtil.LogInfo(logger, $"文档（id:{uid}）更新ES成功", node.ID);
                                     else
-                                        Console.WriteLine("文档更新ES失败");
+                                        LogUtil.LogInfo(logger, $"文档（id:{uid}）更新ES失败", node.ID);
                                     break;
                                 case "d":
                                     var did = opLog["o"]["_id"].ToString();
                                     if (esClient.DeleteDocument(node.Index, node.Type, did))
-                                        Console.WriteLine("文档删除ES成功");
+                                        LogUtil.LogInfo(logger, $"文档（id:{did}）删除ES成功", node.ID);
                                     else
-                                        Console.WriteLine("文档删除ES失败");
+                                        LogUtil.LogInfo(logger, $"文档（id:{did}）删除ES失败", node.ID);
                                     break;
                                 default:
                                     break;
@@ -169,49 +172,22 @@ namespace Mongo2Es.Middleware
                             node.OperTailSign = opLog["ts"].AsBsonTimestamp.Timestamp;
                             client.UpdateCollectionData<SyncNode>(database, collection, node);
                         }
-                    }
 
-                    if (!tailNodesDic.TryGetValue(node.ID, out node))
-                    {
-                        break;
-                    }
+                        if (!tailNodesDic.TryGetValue(node.ID, out node))
+                        {
+                            LogUtil.LogInfo(logger, $"同步节点({node.Name})已删除, tail线程停止", node.ID);
+                            break;
+                        }
 
-                    if (node.Switch == 0)
-                    {
-                        node.Switch = SyncSwitch.Stop;
-                        client.UpdateCollectionData<SyncNode>(database, collection, node);
-                        break;
+                        if (node.Switch == SyncSwitch.Stoping)
+                        {
+                            node.Switch = SyncSwitch.Stop;
+                            client.UpdateCollectionData<SyncNode>(database, collection, node);
+                            LogUtil.LogInfo(logger, $"同步节点({node.Name})已停止, tail线程停止", node.ID);
+                            break;
+                        }
                     }
                 }
-
-                #region 优化
-                //while (opLogs.Count() > 0)
-                //{
-                //    var iopLogs = opLogs.Where(x => x["op"].AsString == "i");
-                //    if (iopLogs.Count() > 0)
-                //    {
-                //        if (esClient.InsertBatchDocument(node.Index, node.Type, IBatchDocuemntHandle(iopLogs, node.ProjectFields)))
-                //        {
-                //            Console.WriteLine("文档写入ES成功");
-                //        }
-                //        else
-                //        {
-                //            Console.WriteLine("文档写入ES失败");
-                //            node.Status = SyncStatus.TailException;
-                //            client.UpdateCollectionData<SyncNode>(database, collection, node);
-                //            return;
-                //        }
-                //    }
-
-                //    var dopLogs = opLogs.Where(x => x["op"].AsString == "d");
-
-                //    var uopLogs = opLogs.Where(x => x["op"].AsString == "u");
-                //    foreach (var log in uopLogs)
-                //    {
-
-                //    }
-                //} 
-                #endregion         
             }
             catch (Exception ex)
             {
@@ -219,98 +195,7 @@ namespace Mongo2Es.Middleware
                 node.Switch = SyncSwitch.Stop;
                 client.UpdateCollectionData<SyncNode>(database, collection, node);
 
-                Console.WriteLine(ex);
-            }
-        }
-
-        /// <summary>
-        /// 增量同步(备用)
-        /// </summary>
-        /// <param name="obj"></param>
-        private void ExcuteTailProcessOther(object obj)
-        {
-            var node = obj as SyncNode;
-            var mongoClient = new Mongo.MongoClient(node.MongoUrl);
-            var esClient = new EsClient(node.EsUrl);
-
-            try
-            {
-                var opLogs = mongoClient.GetMongoOpLogs($"'{node.DataBase}.{node.Collection}'", node.OperTailSign);
-                node.Status = SyncStatus.ProcessTail;
-                node.OperTailSign = client.GetTimestampFromDateTime(DateTime.UtcNow);
-                client.UpdateCollectionData<SyncNode>(database, collection, node);
-
-                #region 优化
-                //while (opLogs.Count() > 0)
-                //{
-                //    var iopLogs = opLogs.Where(x => x["op"].AsString == "i");
-                //    if (iopLogs.Count() > 0)
-                //    {
-                //        if (esClient.InsertBatchDocument(node.Index, node.Type, IBatchDocuemntHandle(iopLogs, node.ProjectFields)))
-                //        {
-                //            Console.WriteLine("文档写入ES成功");
-                //        }
-                //        else
-                //        {
-                //            Console.WriteLine("文档写入ES失败");
-                //            node.Status = SyncStatus.TailException;
-                //            client.UpdateCollectionData<SyncNode>(database, collection, node);
-                //            return;
-                //        }
-                //    }
-
-                //    var dopLogs = opLogs.Where(x => x["op"].AsString == "d");
-
-                //    var uopLogs = opLogs.Where(x => x["op"].AsString == "u");
-                //    foreach (var log in uopLogs)
-                //    {
-
-                //    }
-                //} 
-                #endregion
-
-                foreach (var opLog in opLogs)
-                {
-                    switch (opLog["op"].AsString)
-                    {
-                        case "i":
-                            var iid = opLog["o"]["_id"].ToString();
-                            var idoc = IDocuemntHandle(opLog["o"].AsBsonDocument, node.ProjectFields);
-                            if (idoc.Names.Count() > 0 && esClient.InsertDocument(node.Index, node.Type, iid, idoc))
-                                Console.WriteLine("文档写入ES成功");
-                            else
-                                Console.WriteLine("文档写入ES失败");
-                            break;
-                        case "u":
-                            var uid = opLog["o2"]["_id"].ToString();
-                            var udoc = UDocuemntHandle(opLog["o"].AsBsonDocument, node.ProjectFields);
-                            if (udoc.Names.Count() > 0 && esClient.UpdateDocument(node.Index, node.Type, uid, udoc))
-                                Console.WriteLine("文档更新ES成功");
-                            else
-                                Console.WriteLine("文档更新ES失败");
-                            break;
-                        case "d":
-                            var did = opLog["o"]["_id"].ToString();
-                            if (esClient.DeleteDocument(node.Index, node.Type, did))
-                                Console.WriteLine("文档删除ES成功");
-                            else
-                                Console.WriteLine("文档删除ES失败");
-                            break;
-                        default:
-                            break;
-                    }
-                }
-
-                node.Status = SyncStatus.WaitForTail;
-
-                client.UpdateCollectionData<SyncNode>(database, collection, node);
-            }
-            catch (Exception ex)
-            {
-                node.Status = SyncStatus.TailException;
-                client.UpdateCollectionData<SyncNode>(database, collection, node);
-
-                Console.WriteLine(ex);
+                LogUtil.LogError(logger, $"同步({node.Name})节点异常：{ex}", node.ID);
             }
         }
 
