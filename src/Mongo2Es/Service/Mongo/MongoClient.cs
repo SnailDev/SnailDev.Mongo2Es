@@ -105,7 +105,7 @@ namespace Mongo2Es.Mongo
         public IEnumerable<TDocument> GetCollectionData<TDocument>(string dbName, string collectionName, string filter = "{}", int? limit = null)
         {
             var col = GetCollection<TDocument>(dbName, collectionName);
-            return col.Find(BsonDocument.Parse(filter)).Limit(limit).ToEnumerable();
+            return col.Find(BsonDocument.Parse(filter)).Sort(BsonDocument.Parse("{'_id':1}")).Limit(limit).ToEnumerable();
         }
 
         /// <summary>

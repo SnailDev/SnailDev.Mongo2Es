@@ -24,7 +24,7 @@
         @foreach (var node in Model.Nodes)
         {
             <div class="panel panel-primary">
-                <div class="panel-heading">@node.Name @(string.IsNullOrWhiteSpace(node.ParentDataBase) ? "(child)" : "")</div>
+                <div class="panel-heading">@node.Name @(!string.IsNullOrWhiteSpace(node.ParentDataBase) ? "(child)" : "")</div>
                 <table class="table">
                     <tbody>
                         <tr>
@@ -37,7 +37,7 @@
                         </tr>
                         <tr>
                             <td>
-                                DataBase: @node.DataBase @(string.IsNullOrWhiteSpace(node.ParentDataBase) ? $"(parent:{node.ParentDataBase})" : "")
+                                DataBase: @node.DataBase @(!string.IsNullOrWhiteSpace(node.ParentDataBase) ? $"(parent:{node.ParentDataBase})" : "")
                             </td>
                             <td>
                                 Index: @node.Index
@@ -45,7 +45,7 @@
                         </tr>
                         <tr>
                             <td>
-                                Collection: @node.Collection @(string.IsNullOrWhiteSpace(node.ParentCollection) ? $"(parent:{node.ParentCollection})" : "")
+                                Collection: @node.Collection @(!string.IsNullOrWhiteSpace(node.ParentCollection) ? $"(parent:{node.ParentCollection})" : "")
                             </td>
                             <td>
                                 Type: @node.Type

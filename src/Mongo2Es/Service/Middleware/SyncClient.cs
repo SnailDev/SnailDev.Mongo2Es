@@ -73,7 +73,7 @@ namespace Mongo2Es.Middleware
                 foreach (var key in tailNodesDic.Keys.Except(tailIds))
                 {
                     tailNodesDic.Remove(key, out SyncNode node);
-                } 
+                }
                 #endregion
             };
             nodesRefreshTimer.Disposed += (sender, args) =>
@@ -95,11 +95,11 @@ namespace Mongo2Es.Middleware
 
             try
             {
-                var filter = "{}";
+                var filter = string.IsNullOrEmpty(node.OperScanSign) ? "{}" : $"{{'_id':{{ $gt:new ObjectId('{node.OperScanSign}')}}}}";
                 var data = mongoClient.GetCollectionData<BsonDocument>(node.DataBase, node.Collection, filter, 1);
                 while (data.Count() > 0)
                 {
-                    if (esClient.InsertBatchDocument(node.Index, node.Type, IBatchDocuemntHandle(data, node.ProjectFields)))
+                    if (esClient.InsertBatchDocument(node.Index, node.Type, IBatchDocuemntHandle(data, node.ProjectFields, node.LinkField)))
                     {
                         LogUtil.LogInfo(logger, $"文档(count:{data.Count()})写入ES成功", node.ID);
 
@@ -187,35 +187,63 @@ namespace Mongo2Es.Middleware
                             switch (opLog["op"].AsString)
                             {
                                 case "i":
-                                    var iid = opLog["o"]["_id"].ToString();
+                                    var iid = string.IsNullOrWhiteSpace(node.LinkField) ? opLog["o"]["_id"].ToString() : opLog["o"][node.LinkField].ToString();
                                     var idoc = IDocuemntHandle(opLog["o"].AsBsonDocument, node.ProjectFields);
-                                    if (idoc.Names.Count() > 0 && esClient.InsertDocument(node.Index, node.Type, iid, idoc))
-                                        LogUtil.LogInfo(logger, $"文档（id:{iid}）写入ES成功", node.ID);
-                                    else
+                                    if (idoc.Names.Count() > 0)
                                     {
-                                        flag = false;
-                                        LogUtil.LogInfo(logger, $"文档（id:{iid}）写入ES失败", node.ID);
+                                        if (string.IsNullOrWhiteSpace(node.LinkField))
+                                        {
+                                            if (esClient.InsertDocument(node.Index, node.Type, iid, idoc))
+                                                LogUtil.LogInfo(logger, $"文档（id:{iid}）写入ES成功", node.ID);
+                                            else
+                                            {
+                                                flag = false;
+                                                LogUtil.LogInfo(logger, $"文档（id:{iid}）写入ES失败", node.ID);
+                                            }
+                                        }
+                                        else
+                                        {
+                                            if (esClient.UpdateDocument(node.Index, node.Type, iid, idoc))
+                                                LogUtil.LogInfo(logger, $"文档（id:{iid}）更新ES成功", node.ID);
+                                            else
+                                            {
+                                                flag = false;
+                                                LogUtil.LogInfo(logger, $"文档（id:{iid}）更新ES失败", node.ID);
+                                            }
+                                        }
                                     }
                                     break;
                                 case "u":
                                     var uid = opLog["o2"]["_id"].ToString();
                                     var udoc = UDocuemntHandle(opLog["o"].AsBsonDocument, node.ProjectFields);
-                                    if (udoc.Names.Count() > 0 && esClient.UpdateDocument(node.Index, node.Type, uid, udoc))
-                                        LogUtil.LogInfo(logger, $"文档（id:{uid}）更新ES成功", node.ID);
-                                    else
+                                    if (udoc.Names.Count() > 0)
                                     {
-                                        flag = false;
-                                        LogUtil.LogInfo(logger, $"文档（id:{uid}）更新ES失败", node.ID);
+                                        if (!string.IsNullOrWhiteSpace(node.LinkField))
+                                        {
+                                            var filter = $"{{'_id':{{ $gt:new ObjectId('{uid}')}}}}";
+                                            var dataDetail = mongoClient.GetCollectionData<BsonDocument>(node.DataBase, node.Collection, filter, 1);
+                                            uid = dataDetail.FirstOrDefault()[node.LinkField].ToString();
+                                        }
+                                        if (esClient.UpdateDocument(node.Index, node.Type, uid, udoc))
+                                            LogUtil.LogInfo(logger, $"文档（id:{uid}）更新ES成功", node.ID);
+                                        else
+                                        {
+                                            flag = false;
+                                            LogUtil.LogInfo(logger, $"文档（id:{uid}）更新ES失败", node.ID);
+                                        }
                                     }
                                     break;
                                 case "d":
-                                    var did = opLog["o"]["_id"].ToString();
-                                    if (esClient.DeleteDocument(node.Index, node.Type, did))
-                                        LogUtil.LogInfo(logger, $"文档（id:{did}）删除ES成功", node.ID);
-                                    else
+                                    if (string.IsNullOrWhiteSpace(node.LinkField))
                                     {
-                                        flag = false;
-                                        LogUtil.LogInfo(logger, $"文档（id:{did}）删除ES失败", node.ID);
+                                        var did = opLog["o"]["_id"].ToString();
+                                        if (esClient.DeleteDocument(node.Index, node.Type, did))
+                                            LogUtil.LogInfo(logger, $"文档（id:{did}）删除ES成功", node.ID);
+                                        else
+                                        {
+                                            flag = false;
+                                            LogUtil.LogInfo(logger, $"文档（id:{did}）删除ES失败", node.ID);
+                                        }
                                     }
                                     break;
                                 default:
@@ -312,19 +340,33 @@ namespace Mongo2Es.Middleware
         /// <param name="docs"></param>
         /// <param name="projectFields"></param>
         /// <returns></returns>
-        private List<string> IBatchDocuemntHandle(IEnumerable<BsonDocument> docs, string projectFields)
+        private List<string> IBatchDocuemntHandle(IEnumerable<BsonDocument> docs, string projectFields, string linkfield)
         {
             var handDocs = new List<string>();
             var fieldsArr = projectFields.Split(",");
             foreach (var doc in docs)
             {
-                handDocs.Add(new
+                if (string.IsNullOrWhiteSpace(linkfield))
                 {
-                    index = new
+                    handDocs.Add(new
                     {
-                        _id = doc["_id"].ToString()
-                    }
-                }.ToJson());
+                        index = new
+                        {
+                            _id = doc["_id"].ToString()
+                        }
+                    }.ToJson());
+                }
+                else
+                {
+                    handDocs.Add(new
+                    {
+                        update = new
+                        {
+                            _id = doc[linkfield].ToString()
+                        }
+                    }.ToJson());
+                    doc.Remove(linkfield);
+                }
 
                 var names = doc.Names.ToList();
                 foreach (var name in names)
@@ -333,7 +375,10 @@ namespace Mongo2Es.Middleware
                         doc.Remove(name);
                 }
 
-                handDocs.Add(doc.ToJson());
+                if (string.IsNullOrWhiteSpace(linkfield))
+                    handDocs.Add(doc.ToJson());
+                else
+                    handDocs.Add(new { doc = doc }.ToJson());
             }
 
 
