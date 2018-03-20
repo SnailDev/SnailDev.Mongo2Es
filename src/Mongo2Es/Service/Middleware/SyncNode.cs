@@ -119,6 +119,7 @@ namespace Mongo2Es.Middleware
         /// </summary>
         public string OperScanSign { get; set; }
         public long OperTailSign { get; set; }
+        public int OperTailSignExt { get; set; }
 
         public SyncNode()
         {

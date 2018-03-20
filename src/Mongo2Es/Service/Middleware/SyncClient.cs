@@ -20,6 +20,7 @@ namespace Mongo2Es.Middleware
         private readonly string database = "Mongo2Es";
         private readonly string collection = "SyncNode";
         private System.Timers.Timer nodesRefreshTimer;
+        private ConcurrentDictionary<string, SyncNode> scanNodesDic = new ConcurrentDictionary<string, SyncNode>();
         private ConcurrentDictionary<string, SyncNode> tailNodesDic = new ConcurrentDictionary<string, SyncNode>();
 
         public SyncClient(string mongoUrl)
@@ -31,19 +32,32 @@ namespace Mongo2Es.Middleware
         {
             nodesRefreshTimer = new System.Timers.Timer
             {
-                Interval = 30 * 1000
+                Interval = 3 * 1000
             };
             nodesRefreshTimer.Elapsed += (sender, args) =>
             {
                 var nodes = client.GetCollectionData<SyncNode>(database, collection);
 
+                #region Scan
                 var scanNodes = nodes.Where(x => x.Status == SyncStatus.WaitForScan && x.Switch != SyncSwitch.Stop);
+                var scanIds = scanNodes.Select(x => x.ID);
                 foreach (var node in scanNodes)
                 {
-                    ThreadPool.QueueUserWorkItem(ExcuteScanProcess, node);
-                }
+                    if (!scanNodesDic.ContainsKey(node.ID))
+                    {
+                        ThreadPool.QueueUserWorkItem(ExcuteScanProcess, node);
+                    }
 
-                var tailNodes = nodes.Where(x => x.Status == SyncStatus.WaitForTail && x.Switch != SyncSwitch.Stop);
+                    scanNodesDic.AddOrUpdate(node.ID, node, (key, oldValue) => oldValue = node);
+                }
+                foreach (var key in scanNodesDic.Keys.Except(scanIds))
+                {
+                    scanNodesDic.Remove(key, out SyncNode node);
+                }
+                #endregion
+
+                #region Tail
+                var tailNodes = nodes.Where(x => (x.Status == SyncStatus.WaitForTail || x.Status == SyncStatus.ProcessTail) && x.Switch != SyncSwitch.Stop);
                 var tailIds = tailNodes.Select(x => x.ID);
 
                 foreach (var item in tailNodes)
@@ -59,7 +73,8 @@ namespace Mongo2Es.Middleware
                 foreach (var key in tailNodesDic.Keys.Except(tailIds))
                 {
                     tailNodesDic.Remove(key, out SyncNode node);
-                }
+                } 
+                #endregion
             };
             nodesRefreshTimer.Disposed += (sender, args) =>
             {
@@ -104,6 +119,20 @@ namespace Mongo2Es.Middleware
                         client.UpdateCollectionData<SyncNode>(database, collection, node);
                         return;
                     }
+
+                    if (!scanNodesDic.TryGetValue(node.ID, out node))
+                    {
+                        LogUtil.LogInfo(logger, $"全量同步节点({node.Name})已删除, scan线程停止", node.ID);
+                        return;
+                    }
+
+                    if (node.Switch == SyncSwitch.Stoping)
+                    {
+                        node.Switch = SyncSwitch.Stop;
+                        client.UpdateCollectionData<SyncNode>(database, collection, node);
+                        LogUtil.LogInfo(logger, $"全量同步节点({node.Name})已停止, scan线程停止", node.ID);
+                        return;
+                    }
                 }
 
                 node.Status = SyncStatus.WaitForTail;
@@ -136,10 +165,25 @@ namespace Mongo2Es.Middleware
 
                 while (true)
                 {
-                    using (var cursor = mongoClient.TailMongoOpLogs(node.OperTailSign))
+                    using (var cursor = mongoClient.TailMongoOpLogs($"{node.DataBase}.{node.Collection}", node.OperTailSign, node.OperTailSignExt))
                     {
                         foreach (var opLog in cursor.ToEnumerable())
                         {
+                            if (!tailNodesDic.TryGetValue(node.ID, out node))
+                            {
+                                LogUtil.LogInfo(logger, $"增量同步节点({node.Name})已删除, tail线程停止", node.ID);
+                                return;
+                            }
+
+                            if (node.Switch == SyncSwitch.Stoping)
+                            {
+                                node.Switch = SyncSwitch.Stop;
+                                client.UpdateCollectionData<SyncNode>(database, collection, node);
+                                LogUtil.LogInfo(logger, $"增量同步节点({node.Name})已停止, tail线程停止", node.ID);
+                                return;
+                            }
+
+                            bool flag = true;
                             switch (opLog["op"].AsString)
                             {
                                 case "i":
@@ -148,7 +192,10 @@ namespace Mongo2Es.Middleware
                                     if (idoc.Names.Count() > 0 && esClient.InsertDocument(node.Index, node.Type, iid, idoc))
                                         LogUtil.LogInfo(logger, $"文档（id:{iid}）写入ES成功", node.ID);
                                     else
+                                    {
+                                        flag = false;
                                         LogUtil.LogInfo(logger, $"文档（id:{iid}）写入ES失败", node.ID);
+                                    }
                                     break;
                                 case "u":
                                     var uid = opLog["o2"]["_id"].ToString();
@@ -156,35 +203,39 @@ namespace Mongo2Es.Middleware
                                     if (udoc.Names.Count() > 0 && esClient.UpdateDocument(node.Index, node.Type, uid, udoc))
                                         LogUtil.LogInfo(logger, $"文档（id:{uid}）更新ES成功", node.ID);
                                     else
+                                    {
+                                        flag = false;
                                         LogUtil.LogInfo(logger, $"文档（id:{uid}）更新ES失败", node.ID);
+                                    }
                                     break;
                                 case "d":
                                     var did = opLog["o"]["_id"].ToString();
                                     if (esClient.DeleteDocument(node.Index, node.Type, did))
                                         LogUtil.LogInfo(logger, $"文档（id:{did}）删除ES成功", node.ID);
                                     else
+                                    {
+                                        flag = false;
                                         LogUtil.LogInfo(logger, $"文档（id:{did}）删除ES失败", node.ID);
+                                    }
                                     break;
                                 default:
                                     break;
                             }
 
-                            node.OperTailSign = opLog["ts"].AsBsonTimestamp.Timestamp;
-                            client.UpdateCollectionData<SyncNode>(database, collection, node);
-                        }
+                            if (flag)
+                            {
+                                node.OperTailSign = opLog["ts"].AsBsonTimestamp.Timestamp;
+                                node.OperTailSignExt = opLog["ts"].AsBsonTimestamp.Increment;
+                                client.UpdateCollectionData<SyncNode>(database, collection, node);
+                            }
+                            else
+                            {
+                                node.Status = SyncStatus.TailException;
+                                node.Switch = SyncSwitch.Stop;
+                                client.UpdateCollectionData<SyncNode>(database, collection, node);
 
-                        if (!tailNodesDic.TryGetValue(node.ID, out node))
-                        {
-                            LogUtil.LogInfo(logger, $"同步节点({node.Name})已删除, tail线程停止", node.ID);
-                            break;
-                        }
-
-                        if (node.Switch == SyncSwitch.Stoping)
-                        {
-                            node.Switch = SyncSwitch.Stop;
-                            client.UpdateCollectionData<SyncNode>(database, collection, node);
-                            LogUtil.LogInfo(logger, $"同步节点({node.Name})已停止, tail线程停止", node.ID);
-                            break;
+                                return;
+                            }
                         }
                     }
                 }

@@ -179,21 +179,23 @@ namespace Mongo2Es.Mongo
         /// <param name="ns"></param>
         /// <param name="timestamp"></param>
         /// <returns></returns>
-        public IAsyncCursor<BsonDocument> TailMongoOpLogs(long? timestamp = null)
+        public IAsyncCursor<BsonDocument> TailMongoOpLogs(string ns, long? timestamp = null, int? inc = null)
         {
             var db = client.GetDatabase("local");
             var collection = db.GetCollection<BsonDocument>("oplog.rs");
 
             var op = BsonDocument.Parse($"{{$in: ['i','u','d']}}");
             timestamp = timestamp ?? GetTimestampFromDateTime(DateTime.UtcNow);
-            var ts = BsonDocument.Parse($"{{$gte: new Timestamp({timestamp},1)}}");
-            var filterFunc = BsonDocument.Parse($"{{'op':{op},'ts':{ts}}}");
+            var ts = BsonDocument.Parse($"{{$gt: new Timestamp({timestamp},{inc ?? 1})}}");
+            var filterFunc = BsonDocument.Parse($"{{'ns':'{ns}','op':{op},'ts':{ts}}}");
             var sortFunc = BsonDocument.Parse("{$natural: 1}");
 
             var options = new FindOptions<BsonDocument>
             {
                 // Our cursor is a tailable cursor and informs the server to await
-                CursorType = CursorType.TailableAwait
+                OplogReplay = true,
+                CursorType = CursorType.TailableAwait,
+                //NoCursorTimeout = true,
             };
             return collection.FindSync(filterFunc, options);
         }

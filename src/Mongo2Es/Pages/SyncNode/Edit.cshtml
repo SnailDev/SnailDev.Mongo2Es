@@ -11,8 +11,13 @@
 <form class="form-horizontal" method="post">
     <div asp-validation-summary="All"></div>
     <input asp-for="Node.ID" type="hidden" />
+    <input asp-for="Node.Status" type="hidden" />
+    <input asp-for="Node.Switch" type="hidden" />
+    <input asp-for="Node.OperTailSign" type="hidden" />
+    <input asp-for="Node.OperTailSignExt" type="hidden" />
+    <input asp-for="Node.OperScanSign" type="hidden" />
     <div class="form-group">
-        <label class="col-sm-1 control-label" asp-for="Node.Name"></label>
+        <label class="col-sm-2 control-label" asp-for="Node.Name"></label>
         <div class="col-sm-3">
             <input class="form-control" asp-for="Node.Name" />
             <span asp-validation-for="Node.Name"></span>
@@ -20,7 +25,7 @@
     </div>
 
     <div class="form-group">
-        <label class="col-sm-1 control-label" asp-for="Node.MongoUrl"></label>
+        <label class="col-sm-2 control-label" asp-for="Node.MongoUrl"></label>
         <div class="col-sm-3">
             <select class="form-control" asp-items="@(new SelectList(Model.MongoNodes,"Url","Name"))" asp-for="Node.MongoUrl">
                 <option>Please select one</option>
@@ -30,7 +35,31 @@
     </div>
 
     <div class="form-group">
-        <label class="col-sm-1 control-label" asp-for="Node.DataBase"></label>
+        <label class="col-sm-2 control-label" asp-for="Node.ParentDataBase"></label>
+        <div class="col-sm-3">
+            <input class="form-control" asp-for="Node.ParentDataBase" />
+            <span asp-validation-for="Node.ParentDataBase"></span>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-2 control-label" asp-for="Node.ParentCollection"></label>
+        <div class="col-sm-3">
+            <input class="form-control" asp-for="Node.ParentCollection" />
+            <span asp-validation-for="Node.ParentCollection"></span>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-2 control-label" asp-for="Node.ParentLinkField"></label>
+        <div class="col-sm-3">
+            <input readonly class="form-control" asp-for="Node.ParentLinkField" value="_id" />
+            <span asp-validation-for="Node.ParentLinkField"></span>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-2 control-label" asp-for="Node.DataBase"></label>
         <div class="col-sm-3">
             <input class="form-control" asp-for="Node.DataBase" />
             <span asp-validation-for="Node.DataBase"></span>
@@ -38,7 +67,7 @@
     </div>
 
     <div class="form-group">
-        <label class="col-sm-1 control-label" asp-for="Node.Collection"></label>
+        <label class="col-sm-2 control-label" asp-for="Node.Collection"></label>
         <div class="col-sm-3">
             <input class="form-control" asp-for="Node.Collection" />
             <span asp-validation-for="Node.Collection"></span>
@@ -46,7 +75,15 @@
     </div>
 
     <div class="form-group">
-        <label class="col-sm-1 control-label" asp-for="Node.ProjectFields"></label>
+        <label class="col-sm-2 control-label" asp-for="Node.LinkField"></label>
+        <div class="col-sm-3">
+            <input class="form-control" asp-for="Node.LinkField" />
+            <span asp-validation-for="Node.LinkField"></span>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-2 control-label" asp-for="Node.ProjectFields"></label>
         <div class="col-sm-5">
             <input class="form-control" asp-for="Node.ProjectFields" />
             <span asp-validation-for="Node.ProjectFields"></span>
@@ -54,7 +91,7 @@
     </div>
 
     <div class="form-group">
-        <label class="col-sm-1 control-label" asp-for="Node.EsUrl"></label>
+        <label class="col-sm-2 control-label" asp-for="Node.EsUrl"></label>
         <div class="col-sm-3">
             <select class="form-control" asp-items="@(new SelectList(Model.EsNodes,"Url","Name"))" asp-for="Node.EsUrl">
                 <option>Please select one</option>
@@ -64,7 +101,7 @@
     </div>
 
     <div class="form-group">
-        <label class="col-sm-1 control-label" asp-for="Node.Index"></label>
+        <label class="col-sm-2 control-label" asp-for="Node.Index"></label>
         <div class="col-sm-3">
             <input class="form-control" asp-for="Node.Index" />
             <span asp-validation-for="Node.Index"></span>
@@ -72,7 +109,7 @@
     </div>
 
     <div class="form-group">
-        <label class="col-sm-1 control-label" asp-for="Node.Type"></label>
+        <label class="col-sm-2 control-label" asp-for="Node.Type"></label>
         <div class="col-sm-3">
             <input class="form-control" asp-for="Node.Type" />
             <span asp-validation-for="Node.Type"></span>
@@ -80,7 +117,7 @@
     </div>
 
     <div class="form-group">
-        <div class="col-sm-offset-1 col-sm-11">
+        <div class="col-sm-offset-2 col-sm-21">
             <button class="btn btn-primary" type="submit">Save</button>
         </div>
     </div>

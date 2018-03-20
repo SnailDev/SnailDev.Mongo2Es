@@ -58,11 +58,17 @@ namespace Mongo2Es.Pages.SyncNode
             {
                 if (flag == Middleware.SyncSwitch.Run)
                 {
-                    node.Switch = Middleware.SyncSwitch.Stoping;
+                    if (node.Switch == Middleware.SyncSwitch.Run)
+                        node.Switch = Middleware.SyncSwitch.Stoping;
                 }
                 else
                 {
-                    node.Switch = Middleware.SyncSwitch.Run;
+                    if (node.Switch == Middleware.SyncSwitch.Stop)
+                        node.Switch = Middleware.SyncSwitch.Run;
+                    if (node.Status == Middleware.SyncStatus.ScanException)
+                        node.Status = Middleware.SyncStatus.WaitForScan;
+                    if (node.Status == Middleware.SyncStatus.TailException)
+                        node.Status = Middleware.SyncStatus.WaitForTail;
                 }
 
                 _db.UpdateCollectionData<Middleware.SyncNode>(database, collection, node);

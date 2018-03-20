@@ -1,8 +1,11 @@
 ﻿using Elasticsearch.Net;
+using Mongo2Es.Log;
 using MongoDB.Bson;
 using Newtonsoft.Json.Linq;
+using NLog;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace Mongo2Es.ElasticSearch
@@ -10,6 +13,7 @@ namespace Mongo2Es.ElasticSearch
     public class EsClient
     {
         private ElasticLowLevelClient client;
+        private static Logger logger = LogManager.GetCurrentClassLogger();
 
         /// <summary>
         /// 构造
@@ -42,7 +46,7 @@ namespace Mongo2Es.ElasticSearch
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex);
+                LogUtil.LogError(logger, ex.ToString(), id);
             }
 
             return flag;
@@ -68,7 +72,7 @@ namespace Mongo2Es.ElasticSearch
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex);
+                logger.Error(ex);
             }
 
             return flag;
@@ -101,7 +105,7 @@ namespace Mongo2Es.ElasticSearch
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex);
+                logger.Error(ex);
             }
 
             return flag;
@@ -117,20 +121,24 @@ namespace Mongo2Es.ElasticSearch
         public bool UpdateDocument(string index, string type, string id, BsonDocument doc)
         {
             bool flag = false;
+            if (doc.Names.Count() < 1)
+            {
+                flag = true;
+                return flag;
+            }
 
             try
             {
                 var resStr = client.Update<StringResponse>(index, type, id, PostData.String(BsonDocument.Parse($"{{'doc':{doc}}}").ToJson()));
                 var resObj = JObject.Parse(resStr.Body);
-                // Console.WriteLine(resStr.Body); //多线程问题Research
-                if ((int)resObj["_shards"]["successful"] > 0)
+                if ((int)resObj["_shards"]["total"] == 0 || (int)resObj["_shards"]["successful"] > 0)
                 {
                     flag = true;
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex);
+                LogUtil.LogError(logger, ex.ToString(), id);
             }
 
             return flag;
@@ -150,14 +158,14 @@ namespace Mongo2Es.ElasticSearch
             {
                 var resStr = client.Delete<StringResponse>(index, type, id);
                 var resObj = JObject.Parse(resStr.Body);
-                if ((int)resObj["_shards"]["successful"] > 0)
+                if ((int)resObj["_shards"]["total"] == 0 || (int)resObj["_shards"]["successful"] > 0)
                 {
                     flag = true;
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex);
+                LogUtil.LogError(logger, ex.ToString(), id);
             }
 
             return flag;
