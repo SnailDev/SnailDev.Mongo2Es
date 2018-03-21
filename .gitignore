@@ -1,5 +1,18 @@
 # See http://help.github.com/ignore-files/ for more about ignoring files.
 
+# C#
+*.pdb
+*.suo
+*.user
+bin
+obj
+
+log
+*.pubxml
+.vs
+/source/.vs
+
+# nodejs
 # compiled output
 /dist
 /tmp
@@ -40,15 +53,3 @@ testem.log
 # System Files
 .DS_Store
 Thumbs.db
-
-# C#
-*.pdb
-*.suo
-*.user
-bin
-obj
-
-log
-*.pubxml
-.vs
-/source/.vs

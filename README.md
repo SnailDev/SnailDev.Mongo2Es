@@ -10,7 +10,7 @@ Supports one-to-one, one-to-many, many-to-one, and many-to-many relationships.
 - **many-to-one** - many mongodb collections to one elasticsearch index
 - **many-to-many** - many mongodb collections to many elasticsearch indexs
 
-## my current version
+##  version
 
     elasticsearch：v6.1.2
     mongodb: v3.4.9
@@ -22,8 +22,10 @@ Mongo2Es keeps your mongoDB collections and elastic search cluster in sync. It d
 
 ## How to use
 
-```bash
 [Download](https://github.com/snaildev/mongo2es/tree/master) from GitHub
+```bash
+	cd src
+	dotnet publish --framework netcoreapp2.0 -o ./published 
 ```
 
 ## Start up
