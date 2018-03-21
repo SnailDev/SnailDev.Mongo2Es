@@ -11,9 +11,13 @@ namespace Mongo2Es.Tests
 
         static void Main(string[] args)
         {
-            string assemblyFolder = Directory.GetCurrentDirectory();
-            NLog.LogManager.Configuration = new NLog.Config.XmlLoggingConfiguration(Path.Combine(assemblyFolder, "NLog.config"), true);
-            logger.Info("Hello World");
+            //string assemblyFolder = Directory.GetCurrentDirectory();
+            //NLog.LogManager.Configuration = new NLog.Config.XmlLoggingConfiguration(Path.Combine(assemblyFolder, "NLog.config"), true);
+            //logger.Info("Hello World");
+
+            // 这种延迟方法会占用cpu
+            DateTime startTime = DateTime.Now;
+            while ((DateTime.Now - startTime).TotalSeconds < 10) { Console.WriteLine("Hello"); }
 
             Console.ReadLine();
         }
