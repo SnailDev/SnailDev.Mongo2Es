@@ -24,7 +24,9 @@
         @foreach (var node in Model.Nodes)
         {
             <div class="panel panel-primary">
-                <div class="panel-heading">@node.Name @(!string.IsNullOrWhiteSpace(node.ParentDataBase) ? "(child)" : "")</div>
+                <div class="panel-heading">
+                    @node.Name @(!string.IsNullOrWhiteSpace(node.ParentDataBase) ? "(child)" : "")
+                </div>
                 <table class="table">
                     <tbody>
                         <tr>
@@ -69,18 +71,49 @@
                                         删除
                                     </button>
                                 }
+
+                                <button type="button" class="btn btn-sm btn-info"
+                                        data-toggle="modal" data-id="@node.ID" data-target=".bs-example-modal-lg">
+                                    查看日志
+                                </button>
                             </td>
                         </tr>
                     </tbody>
                 </table>
             </div>
-
-
-
         }
-
-
-
         <a class="btn btn-primary" asp-page="./Edit">Create</a>
     </form>
 </div>
+
+<div class="modal fade bs-example-modal-lg" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title">节点日志</h4>
+            </div>
+            <div class="modal-body" style="max-height:350px;overflow-y:scroll;">
+                Loading...
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts{
+    <script>
+        $('.bs-example-modal-lg').on('show.bs.modal', function (event) {
+            var button = $(event.relatedTarget) // Button that triggered the modal
+            var id = button.data('id') // Extract info from data-* attributes
+            var modal = $(this)
+            //modal.find('.modal-title').text()
+            modal.find('.modal-body').html('');
+            $.get("/SyncNode/logs?id=" + id, function (result) {
+                modal.find('.modal-body').html(result);
+            });
+        })
+    </script>
+}

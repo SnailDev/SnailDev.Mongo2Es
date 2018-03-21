@@ -1,0 +1,15 @@
+﻿@page
+@model Mongo2Es.Pages.SyncNode.LogsModel
+@{
+    ViewData["Title"] = "Logs";
+    Layout = null;
+}
+<ul>
+    @foreach (var log in Model.Logs)
+    {
+        <li>@log["Date"].ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.ffff") | @log["Level"] | @log["Logger"] | @log["Message"]</li>
+    }
+</ul>
+@*@section Scripts {
+        @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    }*@

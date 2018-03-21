@@ -27,7 +27,7 @@ Mongo2Es keeps your mongoDB collections and elastic search cluster in sync. It d
 
 [Download](https://github.com/SnailDev/SnailDev.Mongo2Es/tree/master) from GitHub
 ```bash
-cd src
+cd src/Mongo2Es
 dotnet publish --framework netcoreapp2.0 -o ./published 
 ```
 

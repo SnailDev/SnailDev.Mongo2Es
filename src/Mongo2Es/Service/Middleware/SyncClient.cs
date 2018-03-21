@@ -96,7 +96,7 @@ namespace Mongo2Es.Middleware
             try
             {
                 var filter = string.IsNullOrEmpty(node.OperScanSign) ? "{}" : $"{{'_id':{{ $gt:new ObjectId('{node.OperScanSign}')}}}}";
-                var data = mongoClient.GetCollectionData<BsonDocument>(node.DataBase, node.Collection, filter, 1);
+                var data = mongoClient.GetCollectionData<BsonDocument>(node.DataBase, node.Collection, filter, limit:1);
                 while (data.Count() > 0)
                 {
                     if (esClient.InsertBatchDocument(node.Index, node.Type, IBatchDocuemntHandle(data, node.ProjectFields, node.LinkField)))
@@ -109,7 +109,7 @@ namespace Mongo2Es.Middleware
                         client.UpdateCollectionData<SyncNode>(database, collection, node);
 
                         filter = $"{{'_id':{{ $gt:new ObjectId('{node.OperScanSign}')}}}}";
-                        data = mongoClient.GetCollectionData<BsonDocument>(node.DataBase, node.Collection, filter, 1000);
+                        data = mongoClient.GetCollectionData<BsonDocument>(node.DataBase, node.Collection, filter, limit:1000);
                     }
                     else
                     {
@@ -221,7 +221,7 @@ namespace Mongo2Es.Middleware
                                         if (!string.IsNullOrWhiteSpace(node.LinkField))
                                         {
                                             var filter = $"{{'_id':{{ $gt:new ObjectId('{uid}')}}}}";
-                                            var dataDetail = mongoClient.GetCollectionData<BsonDocument>(node.DataBase, node.Collection, filter, 1);
+                                            var dataDetail = mongoClient.GetCollectionData<BsonDocument>(node.DataBase, node.Collection, filter, limit:1);
                                             uid = dataDetail.FirstOrDefault()[node.LinkField].ToString();
                                         }
                                         if (esClient.UpdateDocument(node.Index, node.Type, uid, udoc))

@@ -102,10 +102,10 @@ namespace Mongo2Es.Mongo
         /// <param name="collectionName"></param>
         /// <param name="filter"></param>
         /// <returns></returns>
-        public IEnumerable<TDocument> GetCollectionData<TDocument>(string dbName, string collectionName, string filter = "{}", int? limit = null)
+        public IEnumerable<TDocument> GetCollectionData<TDocument>(string dbName, string collectionName, string filter = "{}", string sort= "{'_id':1}", int? limit = null)
         {
             var col = GetCollection<TDocument>(dbName, collectionName);
-            return col.Find(BsonDocument.Parse(filter)).Sort(BsonDocument.Parse("{'_id':1}")).Limit(limit).ToEnumerable();
+            return col.Find(BsonDocument.Parse(filter)).Sort(BsonDocument.Parse(sort)).Limit(limit).ToEnumerable();
         }
 
         /// <summary>

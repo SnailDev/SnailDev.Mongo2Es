@@ -6,6 +6,7 @@
 *.user
 bin
 obj
+published
 
 log
 *.pubxml
