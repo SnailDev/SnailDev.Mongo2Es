@@ -1,6 +1,7 @@
 # Mongo2Es
 
 ElasticSearch and MongoDB sync tools for netcore2
+Chinese Documentation - [中文文档](./README.zh-CN.md)
 ![structure]
 
 Supports one-to-one, one-to-many, many-to-one, and many-to-many relationships.
@@ -22,10 +23,10 @@ Mongo2Es keeps your mongoDB collections and elastic search cluster in sync. It d
 
 ## How to use
 
-[Download](https://github.com/snaildev/mongo2es/tree/master) from GitHub
+[Download](https://github.com/SnailDev/SnailDev.Mongo2Es/tree/master) from GitHub
 ```bash
-	cd src
-	dotnet publish --framework netcoreapp2.0 -o ./published 
+cd src
+dotnet publish --framework netcoreapp2.0 -o ./published 
 ```
 
 ## Start up
