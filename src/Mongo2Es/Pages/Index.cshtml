@@ -4,5 +4,52 @@
     ViewData["Title"] = "Mongo2Es";
 }
 
-<h2>===> 1.What's the Mongo2Es?</h2>
+<div @*class="table-responsive"*@>
+    <div class="page-header">
+        <h3>1.What is the Mongo2Es?</h3>
+    </div>
+    <div class="page-item">
+        <p>ElasticSearch and MongoDB sync tools base in netcore2. It keeps your mongoDB collections and elastic search cluster in sync. It does so by tailing the mongo oplog and replicate whatever crud operation into elastic search cluster without any overhead. Please note that a replica set is needed for the Mongo2Es to tail mongoDB.</p>
+        <p><img src="~/images/introduction/structure.jpg" alt="structure" title="structure"></p>
+        <p>Supports one-to-one, one-to-many, many-to-one, and many-to-many relationships.</p>
+        <ul>
+            <li><strong>one-to-one</strong> - one mongodb collection to one elasticsearch index</li>
+            <li><strong>one-to-many</strong> - one mongodb collection to many elasticsearch indexs</li>
+            <li><strong>many-to-one</strong> - many mongodb collections to one elasticsearch index</li>
+            <li><strong>many-to-many</strong> - many mongodb collections to many elasticsearch indexs</li>
+        </ul>
+    </div>
 
+    <div class="page-header">
+        <h3>2.How to use it?</h3>
+    </div>
+    <div class="page-item">
+        <ol>
+            <li><a href="/SyncNode/Mongo">MongoDB Node Setting.</a></li>
+            <p><image src="/images/introduction/mongosetting.jpg"></image></p>
+            <li><a href="/SyncNode/Elastic">Elasticsearch Node Setting.</a></li>
+            <p><image src="/images/introduction/elasticsetting.jpg"></image></p>
+            <li><a href="/SyncNode/">Sync Node Setting.</a></li>
+            <p><image src="/images/introduction/syncnodesetting.jpg"></image></p>
+            <li><a href="/SyncNode/">Start or Stop Sync Node.</a></li>
+            <p><image src="/images/introduction/syncnodelist.jpg"></image></p>
+        </ol>
+    </div>
+
+    <div class="page-header">
+        <h3>3.Reference&Study</h3>
+    </div>
+    <div class="page-item">
+        <ul>
+            <li><a target="_blank" href="https://github.com/mongodb-labs/mongo-connector">mongo-connector</a></li>
+            <li><a target="_blank" href="https://github.com/jike-engineering/mongo-es">mongo-es</a></li>
+            <li><a target="_blank" href="https://github.com/zhr85210078/node-mongodb-es-connector">node-mongodb-es-connector</a></li>
+            <li><a target="_blank" href="https://docs.mongodb.com/manual/reference/command/listCollections/">MongoDB  Administration Commands > listCollections</a></li>
+            <li><a target="_blank" href="https://mongodb.github.io/mongo-csharp-driver/2.4/getting_started/admin_quick_tour/">MongoDB Driver Admin Quick Tour</a></li>
+            <li><a target="_blank" href="https://mongodb.github.io/mongo-csharp-driver/2.4/examples/tailable_cursor/">MongoDB Driver Using a Tailable Cursor</a></li>
+            <li><a target="_blank" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/index.html">Elasticsearch Reference</a></li>
+            <li><a target="_blank" href="https://www.elastic.co/guide/en/elasticsearch/client/net-api/current/elasticsearch-net.html">Elasticsearch.Net - Low level client</a></li>
+            <li><a target="_blank" href="https://github.com/ByNeo/NLog.MongoDB.NetCore">NLog.MongoDB.NetCore</a></li>
+        </ul>
+    </div>
+</div>

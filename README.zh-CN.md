@@ -59,16 +59,16 @@ dotnet Mongo2Es.dll --port {port for web manage} --mongo {mongourl for config}
 
 The MIT License (MIT). Please see [LICENSE](LICENSE) for more information.
 
-[structure]:./img/structure.jpg "structure"
+[structure]:./src/Mongo2Es/wwwroot/images/introduction/structure.jpg "structure"
 
-[webmanage]:./img/webmanage.png "webmanage"
+[webmanage]:./src/Mongo2Es/wwwroot/images/introduction/webmanage.png "webmanage"
 
-[mongodb1]:./img/mongodb1.jpg "mongodb1"
+[mongodb1]:./src/Mongo2Es/wwwroot/images/introduction/mongodb1.jpg "mongodb1"
 
-[mongodb2]:./img/mongodb2.jpg "mongodb2"
+[mongodb2]:./src/Mongo2Es/wwwroot/images/introduction/mongodb2.jpg "mongodb2"
 
-[elasticsearch]:./img/elasticsearch.jpg "elasticsearch"
+[elasticsearch]:./src/Mongo2Es/wwwroot/images/introduction/elasticsearch.jpg "elasticsearch"
 
-[process1]:./img/process1.jpg "process1"
+[process1]:./src/Mongo2Es/wwwroot/images/introduction/process1.jpg "process1"
 
-[process2]:./img/process2.jpg "process2"
+[process2]:./src/Mongo2Es/wwwroot/images/introduction/process2.jpg "process2"
