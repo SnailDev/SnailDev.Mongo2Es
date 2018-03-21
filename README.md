@@ -59,7 +59,7 @@ The MIT License (MIT). Please see [LICENSE](LICENSE) for more information.
 
 [structure]:./img/structure.jpg "structure"
 
-[webmanage]:./img/webmanage.jpg "webmanage"
+[webmanage]:./img/webmanage.png "webmanage"
 
 [mongodb1]:./img/mongodb1.jpg "mongodb1"
 
