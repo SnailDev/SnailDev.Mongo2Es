@@ -1,4 +1,5 @@
 ﻿using Nest;
+using Repository.IEntity;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,7 +23,7 @@ namespace NEST.Repository
         /// <returns></returns>
         public TEntity Get(TKey id)
         {
-            var result = client.Get(new Nest.DocumentPath<TEntity>(new Id(id)));
+            var result = client.Get(new Nest.DocumentPath<TEntity>(new Id(new { id = id.ToString() })));
             if (result.Found)
             {
                 return result.Source;
@@ -39,7 +40,7 @@ namespace NEST.Repository
         /// <param name="sortExp"></param>
         /// <param name="sortType"></param>
         /// <returns></returns>
-        public TEntity Get(Func<QueryContainerDescriptor<TEntity>, QueryContainer> filterExp,
+        public TEntity Get(Func<QueryContainerDescriptor<TEntity>, QueryContainer> filterExp = null,
             Func<SourceFilterDescriptor<TEntity>, ISourceFilter> includeFieldExp = null,
             Expression<Func<TEntity, object>> sortExp = null, SortOrder sortType = SortOrder.Ascending)
         {
@@ -78,10 +79,10 @@ namespace NEST.Repository
         /// <param name="limit"></param>
         /// <param name="skip"></param>
         /// <returns></returns>
-        public List<TEntity> GetList(Func<QueryContainerDescriptor<TEntity>, QueryContainer> filterExp,
+        public List<TEntity> GetList(Func<QueryContainerDescriptor<TEntity>, QueryContainer> filterExp = null,
             Func<SourceFilterDescriptor<TEntity>, ISourceFilter> includeFieldExp = null,
             Expression<Func<TEntity, object>> sortExp = null, SortOrder sortType = SortOrder.Ascending
-           , int limit = 0, int skip = 0)
+           , int limit = 10, int skip = 0)
         {
             Func<SearchDescriptor<TEntity>, ISearchRequest> selector = null;
 

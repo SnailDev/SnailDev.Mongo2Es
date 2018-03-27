@@ -1,24 +1,28 @@
 ﻿using Elasticsearch.Net;
 using Nest;
+using Repository.IEntity;
 using System;
 using System.Linq;
 
 namespace NEST.Repository
 {
-    /// <summary>
-    /// Entity
-    /// </summary>
-    /// <typeparam name="TKey"></typeparam>
-    public interface IEntity<TKey>
+    ///// <summary>
+    ///// Entity
+    ///// </summary>
+    ///// <typeparam name="TKey"></typeparam>
+    //public interface IEntity<TKey>
+    //{
+    //    /// <summary>
+    //    /// 主键
+    //    /// </summary>
+    //    TKey ID { get; set; }
+    //}
+    public class NESTBaseRepository
     {
-        /// <summary>
-        /// 主键
-        /// </summary>
-        TKey ID { get; set; }
+
     }
 
-
-    public class NESTBaseRepository<TEntity, TKey> where TEntity : class, IEntity<TKey>, new()
+    public class NESTBaseRepository<TEntity, TKey> : NESTBaseRepository where TEntity : class, IEntity<TKey>, new()
     {
         protected ElasticClient client;
 
@@ -43,8 +47,8 @@ namespace NEST.Repository
             var connectionPool = new StaticConnectionPool(uris);
             var settings = new ConnectionSettings(connectionPool);
 
-            Index = index ?? typeof(TEntity).Name;
-            Type = type ?? typeof(TEntity).Name;
+            Index = index ?? typeof(TEntity).Name.ToLower();
+            Type = type ?? typeof(TEntity).Name.ToLower();
 
 
             settings = settings.DefaultIndex(Index).DefaultTypeName(Type);

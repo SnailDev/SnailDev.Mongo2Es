@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <PackageReference Include="NEST" Version="6.0.2" />
+    <PackageReference Include="Repository.IEntity" Version="2.0.1" />
   </ItemGroup>
 
 </Project>

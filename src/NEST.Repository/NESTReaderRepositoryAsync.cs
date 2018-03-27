@@ -1,4 +1,5 @@
 ﻿using Nest;
+using Repository.IEntity;
 using System;
 using System.Collections.Generic;
 using System.Linq;
