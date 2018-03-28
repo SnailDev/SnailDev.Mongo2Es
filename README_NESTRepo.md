@@ -31,7 +31,7 @@ Task<Tuple<long, List<TEntity>>> GetListAsync(Func<QueryContainerDescriptor<TEnt
 ## Depend on
 ```csharp
 NEST 6.0.2
-Repository.IEntity 2.0.1 (or you can write IEntity<T> interface and you entity inherit it.)
+Repository.IEntity 2.0.1 (or you can write IEntity\<T\> interface and you entity inherit it.)
 ```
 
 ## How to Use
@@ -87,6 +87,80 @@ Now, you can search data with simple api. eg
 ```
 
 ## How to write a Query
+### 0x00. Structured Search
+>By default, documents will be returned in _score descending order, where the _score for each hit is the relevancy score calculated for how well the document matched the query criteria.
+```csharp
+q => q.DateRange(r => r
+    .Field(f => f.{Field with DateTime Type})
+    .GreaterThanOrEquals(new DateTime(2017, 01, 01))
+    .LessThan(new DateTime(2018, 01, 01))
+)
+```
+
+>The benefit of executing a query in a filter context is that Elasticsearch is able to forgo calculating a relevancy score, as well as cache filters for faster subsequent performance.
+```csharp
+ q => q.Bool(b => b.Filter(bf => bf
+    .DateRange(r => r
+        .Field(f => f.{Field with DateTime Type})
+        .GreaterThanOrEquals(new DateTime(2017, 01, 01))
+        .LessThan(new DateTime(2018, 01, 01))
+        )
+    )
+)
+```
+
+### 0x01. Unstructured Search
+Full text queries (find all documents that contain "Russ" in the lead developer first name field)
+```csharp
+q => q.Match(m => m
+    .Field(f => f.LeadDeveloper.FirstName)
+    .Query("Russ")
+)
+```
+
+### 0x02. Combining Search
+```csharp
+q => q.Bool(b => b
+    .Must(mu => mu
+        .Match(m => m
+            .Field(f => f.LeadDeveloper.FirstName)
+            .Query("Russ")
+        ), mu => mu
+        .Match(m => m
+            .Field(f => f.LeadDeveloper.LastName)
+            .Query("Cam")
+        )
+    )
+    .Filter(fi => fi
+        .DateRange(r => r
+            .Field(f => f.StartedOn)
+            .GreaterThanOrEquals(new DateTime(2017, 01, 01))
+            .LessThan(new DateTime(2018, 01, 01))
+        )
+    )
+)
+```
+
+use operator
+```csharp
+q => q.Match(m => m
+        .Field(f => f.LeadDeveloper.FirstName)
+        .Query("Russ")
+    ) && q
+    .Match(m => m
+        .Field(f => f.LeadDeveloper.LastName)
+        .Query("Cam")
+    ) && +q
+    .DateRange(r => r
+        .Field(f => f.StartedOn)
+        .GreaterThanOrEquals(new DateTime(2017, 01, 01))
+        .LessThan(new DateTime(2018, 01, 01))
+    )
+)
+```
+
+Should==>OR==>||  Must==>And==>&&  Must_Not==>NOT==>!  Filter==>+ 
+the query will be converted to a bool query if use any operator, and the answer to the bool query is always yes or no , so that will not score.
 
 
 ## Reference
