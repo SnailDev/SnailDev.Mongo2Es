@@ -159,7 +159,11 @@ q => q.Match(m => m
 )
 ```
 
-Should==>OR==>||  Must==>And==>&&  Must_Not==>NOT==>!  Filter==>+ 
+Should ==> OR ==> ||  
+Must ==> And ==> &&  
+Must_Not ==> NOT==> !  
+Filter ==> + 
+
 the query will be converted to a bool query if use any operator, and the answer to the bool query is always yes or no , so that will not score.
 
 
