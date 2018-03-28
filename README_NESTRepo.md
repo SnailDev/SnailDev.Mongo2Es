@@ -31,12 +31,12 @@ Task<Tuple<long, List<TEntity>>> GetListAsync(Func<QueryContainerDescriptor<TEnt
 ## Depend on
 ```csharp
 NEST 6.0.2
-Repository.IEntity 2.0.1 (or you can write IEntity\<T\> interface and you entity inherit it.)
+Repository.IEntity 2.0.1 (or you can write IEntity<T> interface and you entity inherit it.)
 ```
 
 ## How to Use
 
-First, you need have an entity inherit IEntity<T>, T is type of PrimaryKey. eg
+First, you need have an entity inherit IEntity\<T\>, T is type of PrimaryKey. eg
 ```csharp
 [Serializable]
 [BsonIgnoreExtraElements]
