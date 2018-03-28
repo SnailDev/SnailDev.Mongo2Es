@@ -9,7 +9,7 @@ A simple encapsulation with NEST client for search data form elasticsearch.
 TEntity Get(TKey id);
 TEntity Get(Func<QueryContainerDescriptor<TEntity>, QueryContainer> filterExp = null,
             Func<SourceFilterDescriptor<TEntity>, ISourceFilter> includeFieldExp = null,
-            Expression<Func<TEntity, object>> sortExp = null, SortOrder sortType = SortOrder.Ascending)
+            Expression<Func<TEntity, object>> sortExp = null, SortOrder sortType = SortOrder.Ascending);
 Tuple<long, List<TEntity>> GetList(Func<QueryContainerDescriptor<TEntity>, QueryContainer> filterExp = null,
             Func<SourceFilterDescriptor<TEntity>, ISourceFilter> includeFieldExp = null,
             Expression<Func<TEntity, object>> sortExp = null, SortOrder sortType = SortOrder.Ascending
@@ -21,15 +21,15 @@ Tuple<long, List<TEntity>> GetList(Func<QueryContainerDescriptor<TEntity>, Query
 Task<TEntity> GetAsync(TKey id);
 Task<TEntity> GetAsync(Func<QueryContainerDescriptor<TEntity>, QueryContainer> filterExp = null,
             Func<SourceFilterDescriptor<TEntity>, ISourceFilter> includeFieldExp = null,
-            Expression<Func<TEntity, object>> sortExp = null, SortOrder sortType = SortOrder.Ascending)
+            Expression<Func<TEntity, object>> sortExp = null, SortOrder sortType = SortOrder.Ascending);
 Task<Tuple<long, List<TEntity>>> GetListAsync(Func<QueryContainerDescriptor<TEntity>, QueryContainer> filterExp = null,
             Func<SourceFilterDescriptor<TEntity>, ISourceFilter> includeFieldExp = null,
             Expression<Func<TEntity, object>> sortExp = null, SortOrder sortType = SortOrder.Ascending
            , int limit = 0, int skip = 0)
 ```
 
-## Reference
-```bash
+## Depend on
+```csharp
 NEST 6.0.2
 Repository.IEntity 2.0.1 (or you can write IEntity<T> interface and you entity inherit it.)
 ```
@@ -87,3 +87,8 @@ Now, you can search data with simple api. eg
 ```
 
 ## How to write a Query
+
+
+## Reference
+[https://www.elastic.co/guide/en/elasticsearch/client/net-api/current/writing-queries.html](https://www.elastic.co/guide/en/elasticsearch/client/net-api/current/writing-queries.html)
+[https://www.elastic.co/guide/en/elasticsearch/client/net-api/current/bool-queries.html](https://www.elastic.co/guide/en/elasticsearch/client/net-api/current/bool-queries.html)
