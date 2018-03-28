@@ -79,7 +79,7 @@ namespace NEST.Repository
         /// <param name="limit"></param>
         /// <param name="skip"></param>
         /// <returns></returns>
-        public List<TEntity> GetList(Func<QueryContainerDescriptor<TEntity>, QueryContainer> filterExp = null,
+        public Tuple<long, List<TEntity>> GetList(Func<QueryContainerDescriptor<TEntity>, QueryContainer> filterExp = null,
             Func<SourceFilterDescriptor<TEntity>, ISourceFilter> includeFieldExp = null,
             Expression<Func<TEntity, object>> sortExp = null, SortOrder sortType = SortOrder.Ascending
            , int limit = 10, int skip = 0)
@@ -105,26 +105,21 @@ namespace NEST.Repository
             }
 
             var result = client.Search(selector);
-            if (result.Total > 0)
-            {
-                return result.Documents.ToList();
-            }
-
-            return null;
+            return new Tuple<long, List<TEntity>>(result.Total, result.Documents.ToList());
         }
 
-        /// <summary>
-        /// Count with filter
-        /// </summary>
-        /// <param name="filterExp"></param>
-        /// <returns></returns>
-        public long Count(Func<QueryContainerDescriptor<TEntity>, QueryContainer> filterExp)
-        {
-            var result = client.Count<TEntity>(s => s
-                   .Query(filterExp ?? (q => q.MatchAll())));
+        ///// <summary>
+        ///// Count with filter
+        ///// </summary>
+        ///// <param name="filterExp"></param>
+        ///// <returns></returns>
+        //public long Count(Func<QueryContainerDescriptor<TEntity>, QueryContainer> filterExp = null)
+        //{
+        //    var result = client.Count<TEntity>(s => s
+        //           .Query(filterExp ?? (q => q.MatchAll())));
 
-            return result.Count;
-        }
+        //    return result.Count;
+        //}
 
     }
 }

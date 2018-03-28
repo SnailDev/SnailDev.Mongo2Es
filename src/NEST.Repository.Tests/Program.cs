@@ -27,7 +27,7 @@ namespace NEST.Repository.Tests
             var users = userRepo.GetList(
                 filterExp: q => +q.Range(r => r.Field(f => f.Age).GreaterThan(13).LessThan(28)), 
                                 // +q.Match(m => m.Field(f => f.Age).Query("13")), 
-                                // q => q.Term(i => i.Field(f => f.Age).Value(13)),
+                                // q => +q.Term(i => i.Field(f => f.Age).Value(13)),
                 includeFieldExp: p => p.Includes(i => i.Fields(f => f.Age, f => f.Sex, f => f.Like)),
                 sortExp: s => s.Age,
                 sortType: Nest.SortOrder.Ascending,
