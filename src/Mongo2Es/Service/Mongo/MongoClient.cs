@@ -141,6 +141,19 @@ namespace Mongo2Es.Mongo
         }
 
         /// <summary>
+        /// 更新数据
+        /// </summary>
+        /// <param name="dbName"></param>
+        /// <param name="collectionName"></param>
+        /// <param name="doc"></param>
+        /// <returns></returns>
+        public UpdateResult UpdateCollectionData<TDocument>(string dbName, string collectionName, string _id, UpdateDefinition<TDocument> update)
+        {
+            var col = GetCollection<TDocument>(dbName, collectionName);
+            return col.UpdateOne(BsonDocument.Parse($"{{'_id':new ObjectId('{_id}')}}"), update);
+        }
+
+        /// <summary>
         /// 删除数据
         /// </summary>
         /// <param name="dbName"></param>

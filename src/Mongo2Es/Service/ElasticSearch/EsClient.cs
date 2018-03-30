@@ -1,6 +1,7 @@
 ﻿using Elasticsearch.Net;
 using Mongo2Es.Log;
 using MongoDB.Bson;
+using MongoDB.Driver.Builders;
 using Newtonsoft.Json.Linq;
 using NLog;
 using System;
@@ -126,7 +127,7 @@ namespace Mongo2Es.ElasticSearch
                 flag = true;
                 return flag;
             }
-
+            
             try
             {
                 var resStr = client.Update<StringResponse>(index, type, id, PostData.String(BsonDocument.Parse($"{{'doc':{doc}}}").ToJson()));

@@ -3,6 +3,7 @@ using Mongo2Es.Log;
 using Mongo2Es.Mongo;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using MongoDB.Driver.Builders;
 using NLog;
 using System;
 using System.Collections.Concurrent;
@@ -95,7 +96,14 @@ namespace Mongo2Es.Middleware
 
             try
             {
-                var filter = "{}";// string.IsNullOrEmpty(node.OperScanSign) ? "{}" : $"{{'_id':{{ $gt:new ObjectId('{node.OperScanSign}')}}}}";
+                // 记下当前Oplog的位置
+                var currentOplog = mongoClient.GetCollectionData<BsonDocument>("local", "oplog.rs", "{}", "{$natural:-1}", 1).FirstOrDefault();
+                //node.OperTailSign = currentOplog["ts"].AsBsonTimestamp.Timestamp;
+                //node.OperTailSignExt = currentOplog["ts"].AsBsonTimestamp.Increment;
+                client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
+                          Update.Set("OperTailSign", currentOplog["ts"].AsBsonTimestamp.Timestamp).Set("OperTailSignExt", currentOplog["ts"].AsBsonTimestamp.Increment).ToBsonDocument());
+
+                var filter = "{}";  // string.IsNullOrEmpty(node.OperScanSign) ? "{}" : $"{{'_id':{{ $gt:new ObjectId('{node.OperScanSign}')}}}}";
                 var data = mongoClient.GetCollectionData<BsonDocument>(node.DataBase, node.Collection, filter, limit: 1);
                 while (data.Count() > 0)
                 {
@@ -103,10 +111,12 @@ namespace Mongo2Es.Middleware
                     {
                         LogUtil.LogInfo(logger, $"文档(count:{data.Count()})写入ES成功", node.ID);
 
-                        node.Status = SyncStatus.ProcessScan;
-                        node.OperScanSign = data.Last()["_id"].ToString();
-                        node.OperTailSign = client.GetTimestampFromDateTime(DateTime.UtcNow);
-                        client.UpdateCollectionData<SyncNode>(database, collection, node);
+                        //node.Status = SyncStatus.ProcessScan;
+                        //node.OperScanSign = data.Last()["_id"].ToString();
+                        //node.OperTailSign = client.GetTimestampFromDateTime(DateTime.UtcNow);
+
+                        client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
+                            Update.Set("Status", SyncStatus.ProcessScan).Set("OperScanSign", data.Last()["_id"].ToString()).ToBsonDocument());
 
                         filter = data.Last()["_id"].IsObjectId ?
                             $"{{'_id':{{ $gt:new ObjectId('{node.OperScanSign}')}}}}"
@@ -116,9 +126,10 @@ namespace Mongo2Es.Middleware
                     else
                     {
                         LogUtil.LogInfo(logger, $"文档(count:{data.Count()})写入ES失败,需手动重置", node.ID);
-                        node.Status = SyncStatus.ScanException;
-                        node.Switch = SyncSwitch.Stop;
-                        client.UpdateCollectionData<SyncNode>(database, collection, node);
+                        //node.Status = SyncStatus.ScanException;
+                        //node.Switch = SyncSwitch.Stop;
+                        client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
+                            Update.Set("Status", SyncStatus.ScanException).Set("Switch", SyncSwitch.Stop).ToBsonDocument());
                         return;
                     }
 
@@ -130,21 +141,29 @@ namespace Mongo2Es.Middleware
 
                     if (node.Switch == SyncSwitch.Stoping)
                     {
-                        node.Switch = SyncSwitch.Stop;
-                        client.UpdateCollectionData<SyncNode>(database, collection, node);
+                        //node.Switch = SyncSwitch.Stop;
+
+                        client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
+                           Update.Set("Switch", SyncSwitch.Stop).ToBsonDocument());
                         LogUtil.LogInfo(logger, $"全量同步节点({node.Name})已停止, scan线程停止", node.ID);
                         return;
                     }
                 }
 
-                node.Status = SyncStatus.WaitForTail;
-                client.UpdateCollectionData<SyncNode>(database, collection, node);
+                //node.Status = SyncStatus.WaitForTail;
+                //client.UpdateCollectionData<SyncNode>(database, collection, node);
+                client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
+                         Update.Set("Status", SyncStatus.WaitForTail).ToBsonDocument());
             }
             catch (Exception ex)
             {
-                node.Status = SyncStatus.ScanException;
-                node.Switch = SyncSwitch.Stop;
-                client.UpdateCollectionData<SyncNode>(database, collection, node);
+                //node.Status = SyncStatus.ScanException;
+                //node.Switch = SyncSwitch.Stop;
+                //client.UpdateCollectionData<SyncNode>(database, collection, node);
+
+                client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
+                    Update.Set("Status", SyncStatus.ScanException).Set("Switch", SyncSwitch.Stop).ToBsonDocument());
+
 
                 LogUtil.LogError(logger, ex.ToString(), node.ID);
             }
@@ -172,8 +191,10 @@ namespace Mongo2Es.Middleware
 
             try
             {
-                node.Status = SyncStatus.ProcessTail;
-                client.UpdateCollectionData<SyncNode>(database, collection, node);
+                //node.Status = SyncStatus.ProcessTail;
+                //client.UpdateCollectionData<SyncNode>(database, collection, node);
+                client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
+                  Update.Set("Status", SyncStatus.ProcessTail).ToBsonDocument());
 
                 while (true)
                 {
@@ -189,8 +210,11 @@ namespace Mongo2Es.Middleware
 
                             if (node.Switch == SyncSwitch.Stoping)
                             {
-                                node.Switch = SyncSwitch.Stop;
-                                client.UpdateCollectionData<SyncNode>(database, collection, node);
+                                //node.Switch = SyncSwitch.Stop;
+                                //client.UpdateCollectionData<SyncNode>(database, collection, node);
+
+                                client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
+                                                    Update.Set("Switch", SyncSwitch.Stop).ToBsonDocument());
                                 LogUtil.LogInfo(logger, $"增量同步节点({node.Name})已停止, tail线程停止", node.ID);
                                 return;
                             }
@@ -264,15 +288,20 @@ namespace Mongo2Es.Middleware
 
                             if (flag)
                             {
-                                node.OperTailSign = opLog["ts"].AsBsonTimestamp.Timestamp;
-                                node.OperTailSignExt = opLog["ts"].AsBsonTimestamp.Increment;
-                                client.UpdateCollectionData<SyncNode>(database, collection, node);
+                                //node.OperTailSign = opLog["ts"].AsBsonTimestamp.Timestamp;
+                                //node.OperTailSignExt = opLog["ts"].AsBsonTimestamp.Increment;
+                                //client.UpdateCollectionData<SyncNode>(database, collection, node);
+
+                                client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
+                                Update.Set("OperTailSign", opLog["ts"].AsBsonTimestamp.Timestamp).Set("OperTailSignExt", opLog["ts"].AsBsonTimestamp.Increment).ToBsonDocument());
                             }
                             else
                             {
-                                node.Status = SyncStatus.TailException;
-                                node.Switch = SyncSwitch.Stop;
-                                client.UpdateCollectionData<SyncNode>(database, collection, node);
+                                //node.Status = SyncStatus.TailException;
+                                //node.Switch = SyncSwitch.Stop;
+                                //client.UpdateCollectionData<SyncNode>(database, collection, node);
+                                client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
+                                                  Update.Set("Status", SyncStatus.TailException).Set("Switch", SyncSwitch.Stop).ToBsonDocument());
 
                                 return;
                             }
@@ -282,9 +311,13 @@ namespace Mongo2Es.Middleware
             }
             catch (Exception ex)
             {
-                node.Status = SyncStatus.TailException;
-                node.Switch = SyncSwitch.Stop;
-                client.UpdateCollectionData<SyncNode>(database, collection, node);
+                //node.Status = SyncStatus.TailException;
+                //node.Switch = SyncSwitch.Stop;
+                //client.UpdateCollectionData<SyncNode>(database, collection, node);
+
+                client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
+                  Update.Set("Status", SyncStatus.TailException).Set("Switch", SyncSwitch.Stop).ToBsonDocument());
+
 
                 LogUtil.LogError(logger, $"同步({node.Name})节点异常：{ex}", node.ID);
             }
@@ -303,19 +336,23 @@ namespace Mongo2Es.Middleware
             var names = doc.Names.ToList();
 
             fieldsArr.Add("id");
-            doc.Add(new BsonElement("id", HandleID(doc["_id"])));
+            BsonDocument newDoc = new BsonDocument
+            {
+                new BsonElement("id", HandleID(doc["_id"]))
+            };
 
             foreach (var name in names)
             {
                 if (fieldsArr.Contains(name))
                 {
-                    doc.Add(new BsonElement(name.ToLower(), doc[name]));
+                    if (doc[name].IsBsonArray || doc[name].IsBsonDocument)
+                        newDoc.AddRange(new BsonDocument(name.ToLower(), doc[name]));
+                    else
+                        newDoc.Add(new BsonElement(name.ToLower(), doc[name]));
                 }
-
-                doc.Remove(name);
             }
 
-            return doc;
+            return newDoc;
         }
 
         /// <summary>
@@ -340,21 +377,25 @@ namespace Mongo2Es.Middleware
                 }.ToJson());
 
                 fieldsArr.Add("id");
-                doc.Add(new BsonElement("id", HandleID(doc["_id"])));
+                BsonDocument newDoc = new BsonDocument
+                {
+                    new BsonElement("id", HandleID(doc["_id"]))
+                };
 
                 var names = _doc.Names.ToList();
                 foreach (var name in names)
                 {
                     if (fieldsArr.Contains(name))
                     {
-                        doc.Add(new BsonElement(name.ToLower(), doc[name]));
+                        if (doc[name].IsBsonArray || doc[name].IsBsonDocument)
+                            newDoc.AddRange(new BsonDocument(name.ToLower(), doc[name]));
+                        else
+                            newDoc.Add(new BsonElement(name.ToLower(), doc[name]));
                     }
-
-                    doc.Remove(name);
                 }
 
-                if (_doc.Names.Count() > 0)
-                    handDocs.Add(_doc.ToJson());
+                if (newDoc.Names.Count() > 0)
+                    handDocs.Add(newDoc.ToJson());
             }
 
 
@@ -396,23 +437,27 @@ namespace Mongo2Es.Middleware
                 }
 
                 fieldsArr.Add("id");
-                doc.Add(new BsonElement("id", HandleID(doc["_id"])));
+                BsonDocument newDoc = new BsonDocument
+                {
+                    new BsonElement("id", HandleID(doc["_id"]))
+                };
 
                 var names = doc.Names.ToList();
                 foreach (var name in names)
                 {
                     if (fieldsArr.Contains(name))
                     {
-                        doc.Add(new BsonElement(name.ToLower(), doc[name]));
+                        if (doc[name].IsBsonArray || doc[name].IsBsonDocument)
+                            newDoc.AddRange(new BsonDocument(name.ToLower(), doc[name]));
+                        else
+                            newDoc.Add(new BsonElement(name.ToLower(), doc[name]));
                     }
-
-                    doc.Remove(name);
                 }
 
                 if (string.IsNullOrWhiteSpace(linkfield))
-                    handDocs.Add(doc.ToJson());
+                    handDocs.Add(newDoc.ToJson());
                 else
-                    handDocs.Add(new { doc = doc }.ToJson());
+                    handDocs.Add(new { doc = newDoc }.ToJson());
             }
 
 
@@ -434,17 +479,20 @@ namespace Mongo2Es.Middleware
 
             var fieldsArr = projectFields.Split(",");
             var names = doc.Names.ToList();
+
+            BsonDocument newDoc = new BsonDocument();
             foreach (var name in names)
             {
                 if (fieldsArr.Contains(name))
                 {
-                    doc.Add(new BsonElement(name.ToLower(), doc[name]));
+                    if (doc[name].IsBsonArray || doc[name].IsBsonDocument)
+                        newDoc.AddRange(new BsonDocument(name.ToLower(), doc[name]));
+                    else
+                        newDoc.Add(new BsonElement(name.ToLower(), doc[name]));
                 }
-
-                doc.Remove(name);
             }
 
-            return doc;
+            return newDoc;
         }
         #endregion
     }
