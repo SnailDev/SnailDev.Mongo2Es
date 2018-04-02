@@ -111,9 +111,9 @@ namespace Mongo2Es.Middleware
                     {
                         LogUtil.LogInfo(logger, $"文档(count:{data.Count()})写入ES成功", node.ID);
 
-                        //node.Status = SyncStatus.ProcessScan;
-                        //node.OperScanSign = data.Last()["_id"].ToString();
-                        //node.OperTailSign = client.GetTimestampFromDateTime(DateTime.UtcNow);
+                        node.Status = SyncStatus.ProcessScan;
+                        node.OperScanSign = data.Last()["_id"].ToString();
+                        node.OperTailSign = client.GetTimestampFromDateTime(DateTime.UtcNow);
 
                         client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
                             Update.Set("Status", SyncStatus.ProcessScan).Set("OperScanSign", data.Last()["_id"].ToString()).ToBsonDocument());
@@ -126,22 +126,24 @@ namespace Mongo2Es.Middleware
                     else
                     {
                         LogUtil.LogInfo(logger, $"文档(count:{data.Count()})写入ES失败,需手动重置", node.ID);
-                        //node.Status = SyncStatus.ScanException;
-                        //node.Switch = SyncSwitch.Stop;
+                        node.Status = SyncStatus.ScanException;
+                        node.Switch = SyncSwitch.Stop;
                         client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
                             Update.Set("Status", SyncStatus.ScanException).Set("Switch", SyncSwitch.Stop).ToBsonDocument());
                         return;
                     }
 
+                    string nodeid = node.ID;
+                    string nodeName = node.Name;
                     if (!scanNodesDic.TryGetValue(node.ID, out node))
                     {
-                        LogUtil.LogInfo(logger, $"全量同步节点({node.Name})已删除, scan线程停止", node.ID);
+                        LogUtil.LogInfo(logger, $"全量同步节点({nodeName})已删除, scan线程停止", nodeid);
                         return;
                     }
 
                     if (node.Switch == SyncSwitch.Stoping)
                     {
-                        //node.Switch = SyncSwitch.Stop;
+                        node.Switch = SyncSwitch.Stop;
 
                         client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
                            Update.Set("Switch", SyncSwitch.Stop).ToBsonDocument());
@@ -150,33 +152,20 @@ namespace Mongo2Es.Middleware
                     }
                 }
 
-                //node.Status = SyncStatus.WaitForTail;
-                //client.UpdateCollectionData<SyncNode>(database, collection, node);
+                node.Status = SyncStatus.WaitForTail;
                 client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
                          Update.Set("Status", SyncStatus.WaitForTail).ToBsonDocument());
             }
             catch (Exception ex)
             {
-                //node.Status = SyncStatus.ScanException;
-                //node.Switch = SyncSwitch.Stop;
-                //client.UpdateCollectionData<SyncNode>(database, collection, node);
-
+                node.Status = SyncStatus.ScanException;
+                node.Switch = SyncSwitch.Stop;
                 client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
                     Update.Set("Status", SyncStatus.ScanException).Set("Switch", SyncSwitch.Stop).ToBsonDocument());
 
 
                 LogUtil.LogError(logger, ex.ToString(), node.ID);
             }
-        }
-
-        /// <summary>
-        /// 处理id
-        /// </summary>
-        /// <param name="id"></param>
-        /// <returns></returns>
-        private BsonValue HandleID(BsonValue id)
-        {
-            return id.IsObjectId ? id.ToString() : id;
         }
 
         /// <summary>
@@ -191,8 +180,7 @@ namespace Mongo2Es.Middleware
 
             try
             {
-                //node.Status = SyncStatus.ProcessTail;
-                //client.UpdateCollectionData<SyncNode>(database, collection, node);
+                node.Status = SyncStatus.ProcessTail;
                 client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
                   Update.Set("Status", SyncStatus.ProcessTail).ToBsonDocument());
 
@@ -210,9 +198,7 @@ namespace Mongo2Es.Middleware
 
                             if (node.Switch == SyncSwitch.Stoping)
                             {
-                                //node.Switch = SyncSwitch.Stop;
-                                //client.UpdateCollectionData<SyncNode>(database, collection, node);
-
+                                node.Switch = SyncSwitch.Stop;
                                 client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
                                                     Update.Set("Switch", SyncSwitch.Stop).ToBsonDocument());
                                 LogUtil.LogInfo(logger, $"增量同步节点({node.Name})已停止, tail线程停止", node.ID);
@@ -257,8 +243,9 @@ namespace Mongo2Es.Middleware
                                         if (!string.IsNullOrWhiteSpace(node.LinkField))
                                         {
                                             var filter = opLog["o2"]["_id"].IsObjectId ? $"{{'_id':new ObjectId('{uid}')}}" : $"{{'_id':{uid}}}";
-                                            var dataDetail = mongoClient.GetCollectionData<BsonDocument>(node.DataBase, node.Collection, filter, limit: 1);
-                                            uid = dataDetail.FirstOrDefault()[node.LinkField].ToString();
+                                            var dataDetail = mongoClient.GetCollectionData<BsonDocument>(node.DataBase, node.Collection, filter, limit: 1).FirstOrDefault();
+                                            if (dataDetail == null) continue;
+                                            uid = dataDetail[node.LinkField].ToString();
                                         }
                                         if (esClient.UpdateDocument(node.Index, node.Type, uid, udoc))
                                             LogUtil.LogInfo(logger, $"文档（id:{uid}）更新ES成功", node.ID);
@@ -270,15 +257,30 @@ namespace Mongo2Es.Middleware
                                     }
                                     break;
                                 case "d":
+                                    var did = opLog["o"]["_id"].ToString();
                                     if (string.IsNullOrWhiteSpace(node.LinkField))
                                     {
-                                        var did = opLog["o"]["_id"].ToString();
                                         if (esClient.DeleteDocument(node.Index, node.Type, did))
                                             LogUtil.LogInfo(logger, $"文档（id:{did}）删除ES成功", node.ID);
                                         else
                                         {
                                             flag = false;
                                             LogUtil.LogInfo(logger, $"文档（id:{did}）删除ES失败", node.ID);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        var filter = opLog["o"]["_id"].IsObjectId ? $"{{'_id':new ObjectId('{did}')}}" : $"{{'_id':{did}}}";
+                                        var dataDetail = mongoClient.GetCollectionData<BsonDocument>(node.DataBase, node.Collection, filter, limit: 1).FirstOrDefault();
+                                        if (dataDetail == null) continue;
+                                        did = dataDetail[node.LinkField].ToString();
+
+                                        if (esClient.DeleteField(node.Index, node.Type, did, node.ProjectFields))
+                                            LogUtil.LogInfo(logger, $"文档（id:{did}）删除ES字段（{node.ProjectFields}）成功", node.ID);
+                                        else
+                                        {
+                                            flag = false;
+                                            LogUtil.LogInfo(logger, $"文档（id:{did}）删除ES字段（{node.ProjectFields}）失败", node.ID);
                                         }
                                     }
                                     break;
@@ -288,18 +290,15 @@ namespace Mongo2Es.Middleware
 
                             if (flag)
                             {
-                                //node.OperTailSign = opLog["ts"].AsBsonTimestamp.Timestamp;
-                                //node.OperTailSignExt = opLog["ts"].AsBsonTimestamp.Increment;
-                                //client.UpdateCollectionData<SyncNode>(database, collection, node);
-
+                                node.OperTailSign = opLog["ts"].AsBsonTimestamp.Timestamp;
+                                node.OperTailSignExt = opLog["ts"].AsBsonTimestamp.Increment;
                                 client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
                                 Update.Set("OperTailSign", opLog["ts"].AsBsonTimestamp.Timestamp).Set("OperTailSignExt", opLog["ts"].AsBsonTimestamp.Increment).ToBsonDocument());
                             }
                             else
                             {
-                                //node.Status = SyncStatus.TailException;
-                                //node.Switch = SyncSwitch.Stop;
-                                //client.UpdateCollectionData<SyncNode>(database, collection, node);
+                                node.Status = SyncStatus.TailException;
+                                node.Switch = SyncSwitch.Stop;
                                 client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
                                                   Update.Set("Status", SyncStatus.TailException).Set("Switch", SyncSwitch.Stop).ToBsonDocument());
 
@@ -311,10 +310,8 @@ namespace Mongo2Es.Middleware
             }
             catch (Exception ex)
             {
-                //node.Status = SyncStatus.TailException;
-                //node.Switch = SyncSwitch.Stop;
-                //client.UpdateCollectionData<SyncNode>(database, collection, node);
-
+                node.Status = SyncStatus.TailException;
+                node.Switch = SyncSwitch.Stop;
                 client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
                   Update.Set("Status", SyncStatus.TailException).Set("Switch", SyncSwitch.Stop).ToBsonDocument());
 
@@ -324,31 +321,80 @@ namespace Mongo2Es.Middleware
         }
 
         #region Doc Handle
+
         /// <summary>
-        /// 插入文档处理
+        /// 处理id
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        private BsonValue HandleID(BsonValue id)
+        {
+            return id.IsObjectId ? id.ToString() : id;
+        }
+
+        /// <summary>
+        /// 处理数组（key转小写）
         /// </summary>
         /// <param name="doc"></param>
         /// <param name="projectFields"></param>
         /// <returns></returns>
-        private BsonDocument IDocuemntHandle(BsonDocument doc, string projectFields)
+        private BsonArray HandleArray(BsonArray docs, string projectFields)
         {
-            var fieldsArr = projectFields.Split(",").ToList();
+            BsonArray newDoc = new BsonArray();
+            foreach (var doc in docs)
+            {
+                if (doc.IsBsonArray)
+                {
+                    newDoc.Add(HandleArray(doc.AsBsonArray, projectFields));
+                }
+                else if (doc.IsBsonDocument)
+                {
+                    newDoc.Add(HandleDoc(doc.AsBsonDocument, projectFields));
+                }
+                else
+                {
+                    newDoc.AddRange(docs);
+                    break;
+                }
+            }
+
+            return newDoc;
+        }
+
+        /// <summary>
+        /// 处理文档（key转小写）
+        /// </summary>
+        /// <param name="doc"></param>
+        /// <param name="projectFields"></param>
+        /// <returns></returns>
+        private BsonDocument HandleDoc(BsonDocument doc, string projectFields)
+        {
+            var fieldsArr = projectFields.Split(",").ToList().ConvertAll(x => x.Split('.')[0]);
+            var subProjectFields = string.Join(',', projectFields.Split(",").ToList().ConvertAll(x => x.Contains(".") ? x.Substring(x.IndexOf(".") + 1) : null));
             var names = doc.Names.ToList();
 
-            fieldsArr.Add("id");
-            BsonDocument newDoc = new BsonDocument
+            BsonDocument newDoc = new BsonDocument();
+            if (doc.Contains("_id"))
             {
-                new BsonElement("id", HandleID(doc["_id"]))
-            };
+                newDoc.Add(new BsonElement("id", HandleID(doc["_id"])));
+            }
 
             foreach (var name in names)
             {
                 if (fieldsArr.Contains(name))
                 {
-                    if (doc[name].IsBsonArray || doc[name].IsBsonDocument)
-                        newDoc.AddRange(new BsonDocument(name.ToLower(), doc[name]));
+                    if (doc[name].IsBsonArray)
+                    {
+                        newDoc.AddRange(new BsonDocument(name.ToLower(), HandleArray(doc[name].AsBsonArray, subProjectFields)));
+                    }
+                    else if (doc[name].IsBsonDocument)
+                    {
+                        newDoc.AddRange(new BsonDocument(name.ToLower(), HandleDoc(doc[name].AsBsonDocument, subProjectFields)));
+                    }
                     else
+                    {
                         newDoc.Add(new BsonElement(name.ToLower(), doc[name]));
+                    }
                 }
             }
 
@@ -361,10 +407,41 @@ namespace Mongo2Es.Middleware
         /// <param name="doc"></param>
         /// <param name="projectFields"></param>
         /// <returns></returns>
+        private BsonDocument IDocuemntHandle(BsonDocument doc, string projectFields)
+        {
+            //var fieldsArr = projectFields.Split(",").ToList();
+            //var names = doc.Names.ToList();
+
+            //fieldsArr.Add("id");
+            //BsonDocument newDoc = new BsonDocument
+            //{
+            //    new BsonElement("id", HandleID(doc["_id"]))
+            //};
+
+            //foreach (var name in names)
+            //{
+            //    if (fieldsArr.Contains(name))
+            //    {
+            //        if (doc[name].IsBsonArray || doc[name].IsBsonDocument)
+            //            newDoc.AddRange(new BsonDocument(name.ToLower(), doc[name]));
+            //        else
+            //            newDoc.Add(new BsonElement(name.ToLower(), doc[name]));
+            //    }
+            //}
+
+            return HandleDoc(doc, projectFields);
+        }
+
+        /// <summary>
+        /// 插入文档处理
+        /// </summary>
+        /// <param name="doc"></param>
+        /// <param name="projectFields"></param>
+        /// <returns></returns>
         private List<string> IDocuemntHandle(IEnumerable<BsonDocument> docs, string projectFields)
         {
             var handDocs = new List<string>();
-            var fieldsArr = projectFields.Split(",").ToList();
+            //var fieldsArr = projectFields.Split(",").ToList();
             foreach (var doc in docs)
             {
                 var _doc = doc["o"].AsBsonDocument;
@@ -376,23 +453,24 @@ namespace Mongo2Es.Middleware
                     }
                 }.ToJson());
 
-                fieldsArr.Add("id");
-                BsonDocument newDoc = new BsonDocument
-                {
-                    new BsonElement("id", HandleID(doc["_id"]))
-                };
+                //fieldsArr.Add("id");
+                //BsonDocument newDoc = new BsonDocument
+                //{
+                //    new BsonElement("id", HandleID(doc["_id"]))
+                //};
 
-                var names = _doc.Names.ToList();
-                foreach (var name in names)
-                {
-                    if (fieldsArr.Contains(name))
-                    {
-                        if (doc[name].IsBsonArray || doc[name].IsBsonDocument)
-                            newDoc.AddRange(new BsonDocument(name.ToLower(), doc[name]));
-                        else
-                            newDoc.Add(new BsonElement(name.ToLower(), doc[name]));
-                    }
-                }
+                //var names = _doc.Names.ToList();
+                //foreach (var name in names)
+                //{
+                //    if (fieldsArr.Contains(name))
+                //    {
+                //        if (doc[name].IsBsonArray || doc[name].IsBsonDocument)
+                //            newDoc.AddRange(new BsonDocument(name.ToLower(), doc[name]));
+                //        else
+                //            newDoc.Add(new BsonElement(name.ToLower(), doc[name]));
+                //    }
+                //}
+                var newDoc = HandleDoc(_doc, projectFields);
 
                 if (newDoc.Names.Count() > 0)
                     handDocs.Add(newDoc.ToJson());
@@ -411,7 +489,7 @@ namespace Mongo2Es.Middleware
         private List<string> IBatchDocuemntHandle(IEnumerable<BsonDocument> docs, string projectFields, string linkfield)
         {
             var handDocs = new List<string>();
-            var fieldsArr = projectFields.Split(",").ToList();
+            //var fieldsArr = projectFields.Split(",").ToList();
             foreach (var doc in docs)
             {
                 if (string.IsNullOrWhiteSpace(linkfield))
@@ -436,23 +514,24 @@ namespace Mongo2Es.Middleware
                     doc.Remove(linkfield);
                 }
 
-                fieldsArr.Add("id");
-                BsonDocument newDoc = new BsonDocument
-                {
-                    new BsonElement("id", HandleID(doc["_id"]))
-                };
+                //fieldsArr.Add("id");
+                //BsonDocument newDoc = new BsonDocument
+                //{
+                //    new BsonElement("id", HandleID(doc["_id"]))
+                //};
 
-                var names = doc.Names.ToList();
-                foreach (var name in names)
-                {
-                    if (fieldsArr.Contains(name))
-                    {
-                        if (doc[name].IsBsonArray || doc[name].IsBsonDocument)
-                            newDoc.AddRange(new BsonDocument(name.ToLower(), doc[name]));
-                        else
-                            newDoc.Add(new BsonElement(name.ToLower(), doc[name]));
-                    }
-                }
+                //var names = doc.Names.ToList();
+                //foreach (var name in names)
+                //{
+                //    if (fieldsArr.Contains(name))
+                //    {
+                //        if (doc[name].IsBsonArray || doc[name].IsBsonDocument)
+                //            newDoc.AddRange(new BsonDocument(name.ToLower(), doc[name]));
+                //        else
+                //            newDoc.Add(new BsonElement(name.ToLower(), doc[name]));
+                //    }
+                //}
+                var newDoc = HandleDoc(doc, projectFields);
 
                 if (string.IsNullOrWhiteSpace(linkfield))
                     handDocs.Add(newDoc.ToJson());
@@ -477,22 +556,22 @@ namespace Mongo2Es.Middleware
                 doc = doc["$set"].AsBsonDocument;
             }
 
-            var fieldsArr = projectFields.Split(",");
-            var names = doc.Names.ToList();
+            //var fieldsArr = projectFields.Split(",");
+            //var names = doc.Names.ToList();
 
-            BsonDocument newDoc = new BsonDocument();
-            foreach (var name in names)
-            {
-                if (fieldsArr.Contains(name))
-                {
-                    if (doc[name].IsBsonArray || doc[name].IsBsonDocument)
-                        newDoc.AddRange(new BsonDocument(name.ToLower(), doc[name]));
-                    else
-                        newDoc.Add(new BsonElement(name.ToLower(), doc[name]));
-                }
-            }
+            //BsonDocument newDoc = new BsonDocument();
+            //foreach (var name in names)
+            //{
+            //    if (fieldsArr.Contains(name))
+            //    {
+            //        if (doc[name].IsBsonArray || doc[name].IsBsonDocument)
+            //            newDoc.AddRange(new BsonDocument(name.ToLower(), doc[name]));
+            //        else
+            //            newDoc.Add(new BsonElement(name.ToLower(), doc[name]));
+            //    }
+            //}
 
-            return newDoc;
+            return HandleDoc(doc, projectFields);
         }
         #endregion
     }
