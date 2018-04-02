@@ -98,10 +98,10 @@ namespace Mongo2Es.Middleware
             {
                 // 记下当前Oplog的位置
                 var currentOplog = mongoClient.GetCollectionData<BsonDocument>("local", "oplog.rs", "{}", "{$natural:-1}", 1).FirstOrDefault();
-                //node.OperTailSign = currentOplog["ts"].AsBsonTimestamp.Timestamp;
-                //node.OperTailSignExt = currentOplog["ts"].AsBsonTimestamp.Increment;
+                node.OperTailSign = currentOplog["ts"].AsBsonTimestamp.Timestamp;
+                node.OperTailSignExt = currentOplog["ts"].AsBsonTimestamp.Increment;
                 client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
-                          Update.Set("OperTailSign", currentOplog["ts"].AsBsonTimestamp.Timestamp).Set("OperTailSignExt", currentOplog["ts"].AsBsonTimestamp.Increment).ToBsonDocument());
+                          Update.Set("OperTailSign", node.OperTailSign).Set("OperTailSignExt", node.OperTailSignExt).ToBsonDocument());
 
                 var filter = "{}";  // string.IsNullOrEmpty(node.OperScanSign) ? "{}" : $"{{'_id':{{ $gt:new ObjectId('{node.OperScanSign}')}}}}";
                 var data = mongoClient.GetCollectionData<BsonDocument>(node.DataBase, node.Collection, filter, limit: 1);
@@ -113,10 +113,10 @@ namespace Mongo2Es.Middleware
 
                         node.Status = SyncStatus.ProcessScan;
                         node.OperScanSign = data.Last()["_id"].ToString();
-                        node.OperTailSign = client.GetTimestampFromDateTime(DateTime.UtcNow);
+                        //node.OperTailSign = client.GetTimestampFromDateTime(DateTime.UtcNow);
 
                         client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
-                            Update.Set("Status", SyncStatus.ProcessScan).Set("OperScanSign", data.Last()["_id"].ToString()).ToBsonDocument());
+                            Update.Set("Status", node.Status).Set("OperScanSign", node.OperScanSign).ToBsonDocument());
 
                         filter = data.Last()["_id"].IsObjectId ?
                             $"{{'_id':{{ $gt:new ObjectId('{node.OperScanSign}')}}}}"
@@ -129,7 +129,7 @@ namespace Mongo2Es.Middleware
                         node.Status = SyncStatus.ScanException;
                         node.Switch = SyncSwitch.Stop;
                         client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
-                            Update.Set("Status", SyncStatus.ScanException).Set("Switch", SyncSwitch.Stop).ToBsonDocument());
+                            Update.Set("Status", node.Status).Set("Switch", node.Switch).ToBsonDocument());
                         return;
                     }
 
@@ -144,9 +144,8 @@ namespace Mongo2Es.Middleware
                     if (node.Switch == SyncSwitch.Stoping)
                     {
                         node.Switch = SyncSwitch.Stop;
-
                         client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
-                           Update.Set("Switch", SyncSwitch.Stop).ToBsonDocument());
+                           Update.Set("Switch", node.Switch).ToBsonDocument());
                         LogUtil.LogInfo(logger, $"全量同步节点({node.Name})已停止, scan线程停止", node.ID);
                         return;
                     }
@@ -154,14 +153,14 @@ namespace Mongo2Es.Middleware
 
                 node.Status = SyncStatus.WaitForTail;
                 client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
-                         Update.Set("Status", SyncStatus.WaitForTail).ToBsonDocument());
+                         Update.Set("Status", node.Status).ToBsonDocument());
             }
             catch (Exception ex)
             {
                 node.Status = SyncStatus.ScanException;
                 node.Switch = SyncSwitch.Stop;
                 client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
-                    Update.Set("Status", SyncStatus.ScanException).Set("Switch", SyncSwitch.Stop).ToBsonDocument());
+                    Update.Set("Status", node.Status).Set("Switch", node.Switch).ToBsonDocument());
 
 
                 LogUtil.LogError(logger, ex.ToString(), node.ID);
@@ -182,7 +181,7 @@ namespace Mongo2Es.Middleware
             {
                 node.Status = SyncStatus.ProcessTail;
                 client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
-                  Update.Set("Status", SyncStatus.ProcessTail).ToBsonDocument());
+                  Update.Set("Status", node.Status).ToBsonDocument());
 
                 while (true)
                 {
@@ -200,7 +199,7 @@ namespace Mongo2Es.Middleware
                             {
                                 node.Switch = SyncSwitch.Stop;
                                 client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
-                                                    Update.Set("Switch", SyncSwitch.Stop).ToBsonDocument());
+                                                    Update.Set("Switch", node.Switch).ToBsonDocument());
                                 LogUtil.LogInfo(logger, $"增量同步节点({node.Name})已停止, tail线程停止", node.ID);
                                 return;
                             }
@@ -293,14 +292,14 @@ namespace Mongo2Es.Middleware
                                 node.OperTailSign = opLog["ts"].AsBsonTimestamp.Timestamp;
                                 node.OperTailSignExt = opLog["ts"].AsBsonTimestamp.Increment;
                                 client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
-                                Update.Set("OperTailSign", opLog["ts"].AsBsonTimestamp.Timestamp).Set("OperTailSignExt", opLog["ts"].AsBsonTimestamp.Increment).ToBsonDocument());
+                                Update.Set("OperTailSign", node.OperTailSign).Set("OperTailSignExt", node.OperTailSignExt).ToBsonDocument());
                             }
                             else
                             {
                                 node.Status = SyncStatus.TailException;
                                 node.Switch = SyncSwitch.Stop;
                                 client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
-                                                  Update.Set("Status", SyncStatus.TailException).Set("Switch", SyncSwitch.Stop).ToBsonDocument());
+                                                  Update.Set("Status", node.Status).Set("Switch", node.Switch).ToBsonDocument());
 
                                 return;
                             }
@@ -313,7 +312,7 @@ namespace Mongo2Es.Middleware
                 node.Status = SyncStatus.TailException;
                 node.Switch = SyncSwitch.Stop;
                 client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
-                  Update.Set("Status", SyncStatus.TailException).Set("Switch", SyncSwitch.Stop).ToBsonDocument());
+                  Update.Set("Status", node.Status).Set("Switch", node.Switch).ToBsonDocument());
 
 
                 LogUtil.LogError(logger, $"同步({node.Name})节点异常：{ex}", node.ID);
