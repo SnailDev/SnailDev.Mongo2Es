@@ -172,14 +172,14 @@ namespace Mongo2Es.ElasticSearch
             return flag;
         }
 
-        public bool DeleteField(string index, string type, string id, string fields)
+        public bool DeleteField(string index, string type, string id, List<string> fields)
         {
             bool flag = false;
 
             try
             {
-                var fieldScripts = fields.Split(',').ToList().ConvertAll(x => $"ctx._source.remove(\"{x}\")");
-                var resStr = client.Update<StringResponse>(index, type, id, PostData.String($"\"script\" : \"{string.Join(";", fieldScripts)}\""));
+                var fieldScripts = fields.ConvertAll(x => $"ctx._source.remove(\\\"{x}\\\")");
+                var resStr = client.Update<StringResponse>(index, type, id, PostData.String($"{{\"script\":\"{string.Join(";", fieldScripts)}\"}}"));
                 var resObj = JObject.Parse(resStr.Body);
                 if ((int)resObj["_shards"]["total"] == 0 || (int)resObj["_shards"]["successful"] > 0)
                 {

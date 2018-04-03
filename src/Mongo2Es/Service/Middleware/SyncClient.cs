@@ -237,16 +237,40 @@ namespace Mongo2Es.Middleware
                                     break;
                                 case "u":
                                     var uid = opLog["o2"]["_id"].ToString();
-                                    var udoc = UDocuemntHandle(opLog["o"].AsBsonDocument, node.ProjectFields);
+                                    var udoc = opLog["o"].AsBsonDocument;
+
+                                    if (!string.IsNullOrWhiteSpace(node.LinkField))
+                                    {
+                                        var filter = opLog["o2"]["_id"].IsObjectId ? $"{{'_id':new ObjectId('{uid}')}}" : $"{{'_id':{uid}}}";
+                                        var dataDetail = mongoClient.GetCollectionData<BsonDocument>(node.DataBase, node.Collection, filter, limit: 1).FirstOrDefault();
+                                        if (dataDetail == null || !dataDetail.Contains(node.LinkField)) continue;
+                                        uid = dataDetail[node.LinkField].ToString();
+                                    }
+
+                                    if (udoc.Contains("$unset"))
+                                    {
+                                        var unsetdoc = udoc["$unset"].AsBsonDocument;
+                                        udoc.Remove("$unset");
+
+                                        var delFields = UnsetDocHandle(unsetdoc, node.ProjectFields);
+                                        if (delFields.Count > 0)
+                                        {
+                                            if (esClient.DeleteField(node.Index, node.Type, uid, delFields))
+                                            {
+                                                LogUtil.LogInfo(logger, $"文档（id:{uid}）删除ES字段({string.Join(",", delFields)})成功", node.ID);
+                                            }
+                                            else
+                                            {
+                                                flag = false;
+                                                LogUtil.LogInfo(logger, $"文档（id:{uid}）删除ES字段({string.Join(",", delFields)})失败", node.ID);
+                                                break;
+                                            }
+                                        }
+                                    }
+
+                                    udoc = UDocuemntHandle(udoc, node.ProjectFields);
                                     if (udoc.Names.Count() > 0)
                                     {
-                                        if (!string.IsNullOrWhiteSpace(node.LinkField))
-                                        {
-                                            var filter = opLog["o2"]["_id"].IsObjectId ? $"{{'_id':new ObjectId('{uid}')}}" : $"{{'_id':{uid}}}";
-                                            var dataDetail = mongoClient.GetCollectionData<BsonDocument>(node.DataBase, node.Collection, filter, limit: 1).FirstOrDefault();
-                                            if (dataDetail == null || !dataDetail.Contains(node.LinkField)) continue;
-                                            uid = dataDetail[node.LinkField].ToString();
-                                        }
                                         if (esClient.UpdateDocument(node.Index, node.Type, uid, udoc))
                                             LogUtil.LogInfo(logger, $"文档（id:{uid}）更新ES成功", node.ID);
                                         else
@@ -255,6 +279,7 @@ namespace Mongo2Es.Middleware
                                             LogUtil.LogInfo(logger, $"文档（id:{uid}）更新ES失败", node.ID);
                                         }
                                     }
+
                                     break;
                                 case "d":
                                     var did = opLog["o"]["_id"].ToString();
@@ -415,26 +440,6 @@ namespace Mongo2Es.Middleware
         /// <returns></returns>
         private BsonDocument IDocuemntHandle(BsonDocument doc, string projectFields)
         {
-            //var fieldsArr = projectFields.Split(",").ToList();
-            //var names = doc.Names.ToList();
-
-            //fieldsArr.Add("id");
-            //BsonDocument newDoc = new BsonDocument
-            //{
-            //    new BsonElement("id", HandleID(doc["_id"]))
-            //};
-
-            //foreach (var name in names)
-            //{
-            //    if (fieldsArr.Contains(name))
-            //    {
-            //        if (doc[name].IsBsonArray || doc[name].IsBsonDocument)
-            //            newDoc.AddRange(new BsonDocument(name.ToLower(), doc[name]));
-            //        else
-            //            newDoc.Add(new BsonElement(name.ToLower(), doc[name]));
-            //    }
-            //}
-
             return HandleDoc(doc, projectFields);
         }
 
@@ -447,7 +452,6 @@ namespace Mongo2Es.Middleware
         private List<string> IDocuemntHandle(IEnumerable<BsonDocument> docs, string projectFields)
         {
             var handDocs = new List<string>();
-            //var fieldsArr = projectFields.Split(",").ToList();
             foreach (var doc in docs)
             {
                 var _doc = doc["o"].AsBsonDocument;
@@ -455,27 +459,10 @@ namespace Mongo2Es.Middleware
                 {
                     index = new
                     {
-                        _id = doc["_id"].ToString() //HandleID(doc["_id"])
+                        _id = doc["_id"].ToString()
                     }
                 }.ToJson());
 
-                //fieldsArr.Add("id");
-                //BsonDocument newDoc = new BsonDocument
-                //{
-                //    new BsonElement("id", HandleID(doc["_id"]))
-                //};
-
-                //var names = _doc.Names.ToList();
-                //foreach (var name in names)
-                //{
-                //    if (fieldsArr.Contains(name))
-                //    {
-                //        if (doc[name].IsBsonArray || doc[name].IsBsonDocument)
-                //            newDoc.AddRange(new BsonDocument(name.ToLower(), doc[name]));
-                //        else
-                //            newDoc.Add(new BsonElement(name.ToLower(), doc[name]));
-                //    }
-                //}
                 var newDoc = HandleDoc(_doc, projectFields);
 
                 if (newDoc.Names.Count() > 0)
@@ -495,7 +482,6 @@ namespace Mongo2Es.Middleware
         private List<string> IBatchDocuemntHandle(IEnumerable<BsonDocument> docs, string projectFields, string linkfield)
         {
             var handDocs = new List<string>();
-            //var fieldsArr = projectFields.Split(",").ToList();
             foreach (var doc in docs)
             {
                 if (string.IsNullOrWhiteSpace(linkfield))
@@ -504,7 +490,7 @@ namespace Mongo2Es.Middleware
                     {
                         index = new
                         {
-                            _id = doc["_id"].ToString() // HandleID(doc["_id"])
+                            _id = doc["_id"].ToString()
                         }
                     }.ToJson());
                 }
@@ -522,23 +508,6 @@ namespace Mongo2Es.Middleware
                     doc.Remove("_id");
                 }
 
-                //fieldsArr.Add("id");
-                //BsonDocument newDoc = new BsonDocument
-                //{
-                //    new BsonElement("id", HandleID(doc["_id"]))
-                //};
-
-                //var names = doc.Names.ToList();
-                //foreach (var name in names)
-                //{
-                //    if (fieldsArr.Contains(name))
-                //    {
-                //        if (doc[name].IsBsonArray || doc[name].IsBsonDocument)
-                //            newDoc.AddRange(new BsonDocument(name.ToLower(), doc[name]));
-                //        else
-                //            newDoc.Add(new BsonElement(name.ToLower(), doc[name]));
-                //    }
-                //}
                 var newDoc = HandleDoc(doc, projectFields);
 
                 if (string.IsNullOrWhiteSpace(linkfield))
@@ -564,22 +533,20 @@ namespace Mongo2Es.Middleware
                 doc = doc["$set"].AsBsonDocument;
             }
 
-            //var fieldsArr = projectFields.Split(",");
-            //var names = doc.Names.ToList();
-
-            //BsonDocument newDoc = new BsonDocument();
-            //foreach (var name in names)
-            //{
-            //    if (fieldsArr.Contains(name))
-            //    {
-            //        if (doc[name].IsBsonArray || doc[name].IsBsonDocument)
-            //            newDoc.AddRange(new BsonDocument(name.ToLower(), doc[name]));
-            //        else
-            //            newDoc.Add(new BsonElement(name.ToLower(), doc[name]));
-            //    }
-            //}
-
             return HandleDoc(doc, projectFields);
+        }
+
+        /// <summary>
+        /// $unset操作处理
+        /// </summary>
+        /// <param name="doc"></param>
+        /// <param name="projectFields"></param>
+        /// <returns></returns>
+        private List<string> UnsetDocHandle(BsonDocument doc, string projectFields)
+        {
+            var fieldsArr = projectFields.Split(",").ToList().ConvertAll(x => x.Trim());
+
+            return doc.Names.Intersect(fieldsArr).ToList();
         }
         #endregion
     }
