@@ -224,6 +224,7 @@ namespace Mongo2Es.Middleware
                                         }
                                         else
                                         {
+                                            idoc.Remove("id");
                                             if (esClient.UpdateDocument(node.Index, node.Type, iid, idoc))
                                                 LogUtil.LogInfo(logger, $"文档（id:{iid}）更新ES成功", node.ID);
                                             else
@@ -243,7 +244,7 @@ namespace Mongo2Es.Middleware
                                         {
                                             var filter = opLog["o2"]["_id"].IsObjectId ? $"{{'_id':new ObjectId('{uid}')}}" : $"{{'_id':{uid}}}";
                                             var dataDetail = mongoClient.GetCollectionData<BsonDocument>(node.DataBase, node.Collection, filter, limit: 1).FirstOrDefault();
-                                            if (dataDetail == null) continue;
+                                            if (dataDetail == null || !dataDetail.Contains(node.LinkField)) continue;
                                             uid = dataDetail[node.LinkField].ToString();
                                         }
                                         if (esClient.UpdateDocument(node.Index, node.Type, uid, udoc))
@@ -267,21 +268,21 @@ namespace Mongo2Es.Middleware
                                             LogUtil.LogInfo(logger, $"文档（id:{did}）删除ES失败", node.ID);
                                         }
                                     }
-                                    else
-                                    {
-                                        var filter = opLog["o"]["_id"].IsObjectId ? $"{{'_id':new ObjectId('{did}')}}" : $"{{'_id':{did}}}";
-                                        var dataDetail = mongoClient.GetCollectionData<BsonDocument>(node.DataBase, node.Collection, filter, limit: 1).FirstOrDefault();
-                                        if (dataDetail == null) continue;
-                                        did = dataDetail[node.LinkField].ToString();
+                                    //else   // 不做处理
+                                    //{
+                                    //    var filter = opLog["o"]["_id"].IsObjectId ? $"{{'_id':new ObjectId('{did}')}}" : $"{{'_id':{did}}}";
+                                    //    var dataDetail = mongoClient.GetCollectionData<BsonDocument>(node.DataBase, node.Collection, filter, limit: 1).FirstOrDefault();
+                                    //    if (dataDetail == null) continue;
+                                    //    did = dataDetail[node.LinkField].ToString();
 
-                                        if (esClient.DeleteField(node.Index, node.Type, did, node.ProjectFields))
-                                            LogUtil.LogInfo(logger, $"文档（id:{did}）删除ES字段（{node.ProjectFields}）成功", node.ID);
-                                        else
-                                        {
-                                            flag = false;
-                                            LogUtil.LogInfo(logger, $"文档（id:{did}）删除ES字段（{node.ProjectFields}）失败", node.ID);
-                                        }
-                                    }
+                                    //    if (esClient.DeleteField(node.Index, node.Type, did, node.ProjectFields))
+                                    //        LogUtil.LogInfo(logger, $"文档（id:{did}）删除ES字段（{node.ProjectFields}）成功", node.ID);
+                                    //    else
+                                    //    {
+                                    //        flag = false;
+                                    //        LogUtil.LogInfo(logger, $"文档（id:{did}）删除ES字段（{node.ProjectFields}）失败", node.ID);
+                                    //    }
+                                    //}
                                     break;
                                 default:
                                     break;
@@ -368,9 +369,14 @@ namespace Mongo2Es.Middleware
         /// <returns></returns>
         private BsonDocument HandleDoc(BsonDocument doc, string projectFields)
         {
-            var fieldsArr = projectFields.Split(",").ToList().ConvertAll(x => x.Split('.')[0]);
-            var subProjectFields = string.Join(',', projectFields.Split(",").ToList().ConvertAll(x => x.Contains(".") ? x.Substring(x.IndexOf(".") + 1) : null));
+            var fieldsArr = projectFields.Split(",").ToList().ConvertAll(x => x.Split('.')[0].Trim());
+            //var subProjectFields = string.Join(',', projectFields.Split(",").ToList().ConvertAll(x => x.Contains(".") ? x.Substring(x.IndexOf(".") + 1).Trim() : null));
             var names = doc.Names.ToList();
+
+            if (fieldsArr.Count(x => string.IsNullOrWhiteSpace(x)) == fieldsArr.Count)
+            {
+                fieldsArr = names;
+            }
 
             BsonDocument newDoc = new BsonDocument();
             if (doc.Contains("_id"))
@@ -382,6 +388,7 @@ namespace Mongo2Es.Middleware
             {
                 if (fieldsArr.Contains(name))
                 {
+                    var subProjectFields = string.Join(',', projectFields.Split(",").Where(s => s.StartsWith(name, StringComparison.CurrentCultureIgnoreCase)).ToList().ConvertAll(x => x.Contains(".") ? x.Substring(x.IndexOf(".") + 1).Trim() : null));
                     if (doc[name].IsBsonArray)
                     {
                         newDoc.AddRange(new BsonDocument(name.ToLower(), HandleArray(doc[name].AsBsonArray, subProjectFields)));
@@ -511,6 +518,8 @@ namespace Mongo2Es.Middleware
                         }
                     }.ToJson());
                     doc.Remove(linkfield);
+
+                    doc.Remove("_id");
                 }
 
                 //fieldsArr.Add("id");
