@@ -7,7 +7,7 @@ bin
 obj
 published
 
-log
+#log
 *.pubxml
 .vs
 /source/.vs
