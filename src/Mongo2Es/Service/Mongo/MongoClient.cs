@@ -174,8 +174,9 @@ namespace Mongo2Es.Mongo
         /// <returns></returns>
         public IEnumerable<BsonDocument> GetMongoOpLogs(string ns, long? timestamp = null)
         {
-            var db = client.GetDatabase("local");
-            var collection = db.GetCollection<BsonDocument>("oplog.rs");
+            //var db = client.GetDatabase("local");
+            //var collection = db.GetCollection<BsonDocument>("oplog.rs");
+            var collection = GetCollection<BsonDocument>("local", "oplog.rs");
 
             var op = BsonDocument.Parse($"{{$in: ['i','u','d']}}");
             timestamp = timestamp ?? GetTimestampFromDateTime(DateTime.UtcNow);
@@ -194,8 +195,9 @@ namespace Mongo2Es.Mongo
         /// <returns></returns>
         public IAsyncCursor<BsonDocument> TailMongoOpLogs(string ns, long? timestamp = null, int? inc = null)
         {
-            var db = client.GetDatabase("local");
-            var collection = db.GetCollection<BsonDocument>("oplog.rs");
+            //var db = client.GetDatabase("local");
+            //var collection = db.GetCollection<BsonDocument>("oplog.rs");
+            var collection = GetCollection<BsonDocument>("local", "oplog.rs");
 
             var op = BsonDocument.Parse($"{{$in: ['i','u','d']}}");
             timestamp = timestamp ?? GetTimestampFromDateTime(DateTime.UtcNow);
@@ -208,7 +210,7 @@ namespace Mongo2Es.Mongo
                 // Our cursor is a tailable cursor and informs the server to await
                 OplogReplay = true,
                 CursorType = CursorType.TailableAwait,
-                //NoCursorTimeout = true,
+                NoCursorTimeout = true,
             };
             return collection.FindSync(filterFunc, options);
         }
