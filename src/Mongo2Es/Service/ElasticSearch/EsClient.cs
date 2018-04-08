@@ -13,6 +13,7 @@ namespace Mongo2Es.ElasticSearch
 {
     public class EsClient
     {
+        private string nodeId;
         private ElasticLowLevelClient client;
         private static Logger logger = LogManager.GetCurrentClassLogger();
 
@@ -20,8 +21,9 @@ namespace Mongo2Es.ElasticSearch
         /// 构造
         /// </summary>
         /// <param name="url"></param>
-        public EsClient(string url)
+        public EsClient(string nodeid, string url)
         {
+            nodeId = nodeid;
             var settings = new ConnectionConfiguration(new Uri(url)).RequestTimeout(TimeSpan.FromSeconds(10));
             this.client = new ElasticLowLevelClient(settings);
         }
@@ -44,10 +46,14 @@ namespace Mongo2Es.ElasticSearch
                 {
                     flag = true;
                 }
+                else
+                {
+                    LogUtil.LogInfo(logger, resStr.DebugInformation, nodeId);
+                }
             }
             catch (Exception ex)
             {
-                LogUtil.LogError(logger, ex.ToString(), id);
+                LogUtil.LogError(logger, ex.ToString(), nodeId);
             }
 
             return flag;
@@ -70,10 +76,14 @@ namespace Mongo2Es.ElasticSearch
                 {
                     flag = true;
                 }
+                else
+                {
+                    LogUtil.LogInfo(logger, resStr.DebugInformation, nodeId);
+                }
             }
             catch (Exception ex)
             {
-                logger.Error(ex);
+                LogUtil.LogError(logger, ex.ToString(), nodeId);
             }
 
             return flag;
@@ -103,10 +113,14 @@ namespace Mongo2Es.ElasticSearch
                 {
                     flag = true;
                 }
+                else
+                {
+                    LogUtil.LogInfo(logger, resStr.DebugInformation, nodeId);
+                }
             }
             catch (Exception ex)
             {
-                logger.Error(ex);
+               LogUtil.LogError(logger, ex.ToString(), nodeId);
             }
 
             return flag;
@@ -136,10 +150,14 @@ namespace Mongo2Es.ElasticSearch
                 {
                     flag = true;
                 }
+                else
+                {
+                    LogUtil.LogInfo(logger, resStr.DebugInformation, nodeId);
+                }
             }
             catch (Exception ex)
             {
-                LogUtil.LogError(logger, ex.ToString(), id);
+                LogUtil.LogError(logger, ex.ToString(), nodeId);
             }
 
             return flag;
@@ -163,10 +181,14 @@ namespace Mongo2Es.ElasticSearch
                 {
                     flag = true;
                 }
+                else
+                {
+                    LogUtil.LogInfo(logger, resStr.DebugInformation, nodeId);
+                }
             }
             catch (Exception ex)
             {
-                LogUtil.LogError(logger, ex.ToString(), id);
+                LogUtil.LogError(logger, ex.ToString(), nodeId);
             }
 
             return flag;
@@ -185,11 +207,15 @@ namespace Mongo2Es.ElasticSearch
                 {
                     flag = true;
                 }
+                else
+                {
+                    LogUtil.LogInfo(logger, resStr.DebugInformation, nodeId);
+                }
             }
 
             catch (Exception ex)
             {
-                LogUtil.LogError(logger, ex.ToString(), id);
+                LogUtil.LogError(logger, ex.ToString(), nodeId);
             }
 
             return flag;

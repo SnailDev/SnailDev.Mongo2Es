@@ -92,7 +92,7 @@ namespace Mongo2Es.Middleware
         {
             var node = obj as SyncNode;
             var mongoClient = new Mongo.MongoClient(node.MongoUrl);
-            var esClient = new EsClient(node.EsUrl);
+            var esClient = new EsClient(node.ID, node.EsUrl);
 
             try
             {
@@ -175,7 +175,7 @@ namespace Mongo2Es.Middleware
         {
             var node = obj as SyncNode;
             var mongoClient = new Mongo.MongoClient(node.MongoUrl);
-            var esClient = new EsClient(node.EsUrl);
+            var esClient = new EsClient(node.ID, node.EsUrl);
 
             try
             {
