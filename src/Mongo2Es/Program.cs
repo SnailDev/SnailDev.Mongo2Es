@@ -25,6 +25,15 @@ namespace Mongo2Es
             NLog.LogManager.Configuration = new NLog.Config.XmlLoggingConfiguration(Path.Combine(assemblyFolder, "NLog.config"), true);
             logger.Info("Log Setting Completed.");
 
+            // Service
+            Thread syncSerivce = new Thread(() =>
+            {
+                var client = new Middleware.SyncClient(mongoUrl);
+                client.Run();
+            });
+            syncSerivce.Start();
+            logger.Info("Service Start Completed.");
+
             // Web
             Thread syncWeb = new Thread(() =>
              {
@@ -39,17 +48,6 @@ namespace Mongo2Es
              });
             syncWeb.Start();
             logger.Info("Web Start Completed.");
-
-            // Service
-            Thread syncSerivce = new Thread(() =>
-            {
-                //var servicesProvider = BuildDi();
-                //var runner = servicesProvider.GetRequiredService<Middleware.SyncClient>();
-                var client = new Middleware.SyncClient(mongoUrl);
-                client.Run();
-            });
-            syncSerivce.Start();
-            logger.Info("Service Start Completed.");
         }
     }
 }
