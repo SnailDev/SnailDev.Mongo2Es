@@ -104,6 +104,7 @@ namespace Mongo2Es.Middleware
                 client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
                           Update.Set("OperTailSign", node.OperTailSign).Set("OperTailSignExt", node.OperTailSignExt).ToBsonDocument());
 
+                int times = 0;
                 var filter = "{}";  // string.IsNullOrEmpty(node.OperScanSign) ? "{}" : $"{{'_id':{{ $gt:new ObjectId('{node.OperScanSign}')}}}}";
                 var data = mongoClient.GetCollectionData<BsonDocument>(node.DataBase, node.Collection, filter, limit: 1);
                 while (data.Count() > 0)
@@ -138,17 +139,23 @@ namespace Mongo2Es.Middleware
                     string nodeName = node.Name;
                     if (!scanNodesDic.TryGetValue(node.ID, out node))
                     {
-                        LogUtil.LogInfo(logger, $"全量同步节点({nodeName})已删除, scan线程停止", nodeid);
-                        return;
+                        times++;
+                        if (times > 10)
+                        {
+                            LogUtil.LogInfo(logger, $"全量同步节点({nodeName})已删除, scan线程停止", nodeid);
+                            return;
+                        }
                     }
-
-                    if (node.Switch == SyncSwitch.Stoping)
+                    else
                     {
-                        node.Switch = SyncSwitch.Stop;
-                        client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
-                           Update.Set("Switch", node.Switch).ToBsonDocument());
-                        LogUtil.LogInfo(logger, $"全量同步节点({node.Name})已停止, scan线程停止", node.ID);
-                        return;
+                        if (node.Switch == SyncSwitch.Stoping)
+                        {
+                            node.Switch = SyncSwitch.Stop;
+                            client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
+                               Update.Set("Switch", node.Switch).ToBsonDocument());
+                            LogUtil.LogInfo(logger, $"全量同步节点({node.Name})已停止, scan线程停止", node.ID);
+                            return;
+                        }
                     }
                 }
 
@@ -180,6 +187,7 @@ namespace Mongo2Es.Middleware
 
             try
             {
+                int times = 0;
                 node.Status = SyncStatus.ProcessTail;
                 client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
                   Update.Set("Status", node.Status).ToBsonDocument());
@@ -192,17 +200,23 @@ namespace Mongo2Es.Middleware
                         {
                             if (!tailNodesDic.TryGetValue(node.ID, out node))
                             {
-                                LogUtil.LogInfo(logger, $"增量同步节点({node.Name})已删除, tail线程停止", node.ID);
-                                return;
+                                times++;
+                                if (times > 10)
+                                {
+                                    LogUtil.LogInfo(logger, $"增量同步节点({node.Name})已删除, tail线程停止", node.ID);
+                                    return;
+                                }
                             }
-
-                            if (node.Switch == SyncSwitch.Stoping)
+                            else
                             {
-                                node.Switch = SyncSwitch.Stop;
-                                client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
-                                                    Update.Set("Switch", node.Switch).ToBsonDocument());
-                                LogUtil.LogInfo(logger, $"增量同步节点({node.Name})已停止, tail线程停止", node.ID);
-                                return;
+                                if (node.Switch == SyncSwitch.Stoping)
+                                {
+                                    node.Switch = SyncSwitch.Stop;
+                                    client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
+                                                        Update.Set("Switch", node.Switch).ToBsonDocument());
+                                    LogUtil.LogInfo(logger, $"增量同步节点({node.Name})已停止, tail线程停止", node.ID);
+                                    return;
+                                }
                             }
 
                             bool flag = true;
@@ -294,21 +308,6 @@ namespace Mongo2Es.Middleware
                                             LogUtil.LogInfo(logger, $"文档（id:{did}）删除ES失败", node.ID);
                                         }
                                     }
-                                    //else   // 不做处理
-                                    //{
-                                    //    var filter = opLog["o"]["_id"].IsObjectId ? $"{{'_id':new ObjectId('{did}')}}" : $"{{'_id':{did}}}";
-                                    //    var dataDetail = mongoClient.GetCollectionData<BsonDocument>(node.DataBase, node.Collection, filter, limit: 1).FirstOrDefault();
-                                    //    if (dataDetail == null) continue;
-                                    //    did = dataDetail[node.LinkField].ToString();
-
-                                    //    if (esClient.DeleteField(node.Index, node.Type, did, node.ProjectFields))
-                                    //        LogUtil.LogInfo(logger, $"文档（id:{did}）删除ES字段（{node.ProjectFields}）成功", node.ID);
-                                    //    else
-                                    //    {
-                                    //        flag = false;
-                                    //        LogUtil.LogInfo(logger, $"文档（id:{did}）删除ES字段（{node.ProjectFields}）失败", node.ID);
-                                    //    }
-                                    //}
                                     break;
                                 default:
                                     break;
