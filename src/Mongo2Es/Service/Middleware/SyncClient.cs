@@ -388,6 +388,7 @@ namespace Mongo2Es.Middleware
             if (fieldsArr.Count(x => string.IsNullOrWhiteSpace(x)) == fieldsArr.Count)
             {
                 fieldsArr = names;
+                fieldsArr.Remove("_id");
             }
 
             BsonDocument newDoc = new BsonDocument();
@@ -533,6 +534,7 @@ namespace Mongo2Es.Middleware
         {
             projectFields = projectFields ?? "";
             var fieldsArr = projectFields.Split(",").ToList().ConvertAll(x => x.Trim());
+            fieldsArr.Remove("_id");
 
             return doc.Names.Intersect(fieldsArr).ToList();
         }
