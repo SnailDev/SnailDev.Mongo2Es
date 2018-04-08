@@ -7,9 +7,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Mongo2Es", "Mongo2Es\Mongo2
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Mongo2Es.Tests", "Mongo2Es.Tests\Mongo2Es.Tests.csproj", "{82050A96-C195-46B7-BB3E-FEC45276D36B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NEST.Repository", "NEST.Repository\NEST.Repository.csproj", "{86676440-9C10-4141-8FCA-6C82439A1B15}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NEST.Repository", "NEST.Repository\NEST.Repository.csproj", "{86676440-9C10-4141-8FCA-6C82439A1B15}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NEST.Repository.Tests", "NEST.Repository.Tests\NEST.Repository.Tests.csproj", "{415CADAB-B64E-4F6D-AB4C-0F086B5B8585}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NEST.Repository.Tests", "NEST.Repository.Tests\NEST.Repository.Tests.csproj", "{415CADAB-B64E-4F6D-AB4C-0F086B5B8585}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

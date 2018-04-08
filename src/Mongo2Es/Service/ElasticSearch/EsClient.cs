@@ -25,7 +25,10 @@ namespace Mongo2Es.ElasticSearch
         public EsClient(string nodeid, string url)
         {
             nodeId = nodeid;
-            var settings = new ConnectionConfiguration(new Uri(url)).RequestTimeout(TimeSpan.FromSeconds(10));
+
+            var uris = url.Split(",").ToList().ConvertAll(x => new Uri(x));
+            var connectionPool = new SniffingConnectionPool(uris);
+            var settings = new ConnectionConfiguration(connectionPool).RequestTimeout(TimeSpan.FromSeconds(30));
             this.client = new ElasticLowLevelClient(settings);
         }
 
