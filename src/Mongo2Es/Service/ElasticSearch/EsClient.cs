@@ -39,9 +39,10 @@ namespace Mongo2Es.ElasticSearch
         {
             bool flag = false;
 
+            StringResponse resStr = null;
             try
             {
-                var resStr = client.Index<StringResponse>(index, type, id, PostData.String(doc.ToJson(new JsonWriterSettings { OutputMode = JsonOutputMode.Strict })));
+                resStr = client.Index<StringResponse>(index, type, id, PostData.String(doc.ToJson(new JsonWriterSettings { OutputMode = JsonOutputMode.Strict })));
                 var resObj = JObject.Parse(resStr.Body);
                 if ((int)resObj["_shards"]["successful"] > 0)
                 {
@@ -54,6 +55,7 @@ namespace Mongo2Es.ElasticSearch
             }
             catch (Exception ex)
             {
+                LogUtil.LogInfo(logger, resStr.DebugInformation, nodeId);
                 LogUtil.LogError(logger, ex.ToString(), nodeId);
             }
 
@@ -69,9 +71,10 @@ namespace Mongo2Es.ElasticSearch
         {
             bool flag = false;
 
+            StringResponse resStr = null;
             try
             {
-                var resStr = client.Bulk<StringResponse>(PostData.MultiJson(docs));
+                resStr = client.Bulk<StringResponse>(PostData.MultiJson(docs));
                 var resObj = JObject.Parse(resStr.Body);
                 if (!(bool)resObj["errors"])
                 {
@@ -84,6 +87,7 @@ namespace Mongo2Es.ElasticSearch
             }
             catch (Exception ex)
             {
+                LogUtil.LogInfo(logger, resStr.DebugInformation, nodeId);
                 LogUtil.LogError(logger, ex.ToString(), nodeId);
             }
 
@@ -106,9 +110,10 @@ namespace Mongo2Es.ElasticSearch
                 return flag;
             }
 
+            StringResponse resStr = null;
             try
             {
-                var resStr = client.Bulk<StringResponse>(index, type, PostData.MultiJson(docs));
+                resStr = client.Bulk<StringResponse>(index, type, PostData.MultiJson(docs));
                 var resObj = JObject.Parse(resStr.Body);
                 if (!(bool)resObj["errors"])
                 {
@@ -121,7 +126,8 @@ namespace Mongo2Es.ElasticSearch
             }
             catch (Exception ex)
             {
-               LogUtil.LogError(logger, ex.ToString(), nodeId);
+                LogUtil.LogInfo(logger, resStr.DebugInformation, nodeId);
+                LogUtil.LogError(logger, ex.ToString(), nodeId);
             }
 
             return flag;
@@ -143,9 +149,10 @@ namespace Mongo2Es.ElasticSearch
                 return flag;
             }
 
+            StringResponse resStr = null;
             try
             {
-                var resStr = client.Update<StringResponse>(index, type, id, PostData.String(BsonDocument.Parse($"{{'doc':{doc}}}").ToJson(new JsonWriterSettings { OutputMode = JsonOutputMode.Strict })));
+                resStr = client.Update<StringResponse>(index, type, id, PostData.String(BsonDocument.Parse($"{{'doc':{doc}}}").ToJson(new JsonWriterSettings { OutputMode = JsonOutputMode.Strict })));
                 var resObj = JObject.Parse(resStr.Body);
                 if ((int)resObj["_shards"]["total"] == 0 || (int)resObj["_shards"]["successful"] > 0)
                 {
@@ -158,6 +165,7 @@ namespace Mongo2Es.ElasticSearch
             }
             catch (Exception ex)
             {
+                LogUtil.LogInfo(logger, resStr.DebugInformation, nodeId);
                 LogUtil.LogError(logger, ex.ToString(), nodeId);
             }
 
@@ -174,9 +182,10 @@ namespace Mongo2Es.ElasticSearch
         {
             bool flag = false;
 
+            StringResponse resStr = null;
             try
             {
-                var resStr = client.Delete<StringResponse>(index, type, id);
+                resStr = client.Delete<StringResponse>(index, type, id);
                 var resObj = JObject.Parse(resStr.Body);
                 if ((int)resObj["_shards"]["total"] == 0 || (int)resObj["_shards"]["successful"] > 0)
                 {
@@ -189,6 +198,7 @@ namespace Mongo2Es.ElasticSearch
             }
             catch (Exception ex)
             {
+                LogUtil.LogInfo(logger, resStr.DebugInformation, nodeId);
                 LogUtil.LogError(logger, ex.ToString(), nodeId);
             }
 
@@ -199,10 +209,11 @@ namespace Mongo2Es.ElasticSearch
         {
             bool flag = false;
 
+            StringResponse resStr = null;
             try
             {
                 var fieldScripts = fields.ConvertAll(x => $"ctx._source.remove(\\\"{x}\\\")");
-                var resStr = client.Update<StringResponse>(index, type, id, PostData.String($"{{\"script\":\"{string.Join(";", fieldScripts)}\"}}"));
+                resStr = client.Update<StringResponse>(index, type, id, PostData.String($"{{\"script\":\"{string.Join(";", fieldScripts)}\"}}"));
                 var resObj = JObject.Parse(resStr.Body);
                 if ((int)resObj["_shards"]["total"] == 0 || (int)resObj["_shards"]["successful"] > 0)
                 {
@@ -216,6 +227,7 @@ namespace Mongo2Es.ElasticSearch
 
             catch (Exception ex)
             {
+                LogUtil.LogInfo(logger, resStr.DebugInformation, nodeId);
                 LogUtil.LogError(logger, ex.ToString(), nodeId);
             }
 
