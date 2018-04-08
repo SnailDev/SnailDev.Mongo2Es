@@ -30,9 +30,8 @@ namespace Mongo2Es
             {
                 var client = new Middleware.SyncClient(mongoUrl);
                 client.Run();
+                logger.Info("Service Start Completed.");
             });
-            syncSerivce.Start();
-            logger.Info("Service Start Completed.");
 
             // Web
             Thread syncWeb = new Thread(() =>
@@ -45,9 +44,11 @@ namespace Mongo2Es
                      .Build();
 
                  host.Run();
+                 logger.Info("Web Start Completed.");
              });
+
+            syncSerivce.Start();
             syncWeb.Start();
-            logger.Info("Web Start Completed.");
         }
     }
 }
