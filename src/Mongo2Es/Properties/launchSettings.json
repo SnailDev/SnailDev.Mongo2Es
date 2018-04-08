@@ -2,7 +2,7 @@
   "profiles": {
     "Mongo2Es": {
       "commandName": "Project",
-      "commandLineArgs": "--port 5000 --mongo mongodb://localhost:27017"
+      "commandLineArgs": "--bindip http://locahost:5000 --mongo mongodb://localhost:27017"
     }
   }
 }

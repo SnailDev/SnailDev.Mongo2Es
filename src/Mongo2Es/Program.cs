@@ -17,7 +17,7 @@ namespace Mongo2Es
         static void Main(string[] args)
         {
             var arguments = new ConfigurationBuilder().AddCommandLine(args).Build();
-            var port = arguments["port"] ?? "9300";
+            var url = arguments["bindip"] ?? "http://localhost:5000";
             var mongoUrl = arguments["mongo"] ?? "mongodb://localhost:27017";
 
             //Log
@@ -31,7 +31,7 @@ namespace Mongo2Es
                  var host =
                      WebHost.CreateDefaultBuilder(args)
                      .UseContentRoot(assemblyFolder)
-                     .UseUrls($"http://localhost:{port}")
+                     .UseUrls(url)
                      .UseStartup<Startup>()
                      .Build();
 
