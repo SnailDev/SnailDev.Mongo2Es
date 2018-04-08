@@ -381,6 +381,7 @@ namespace Mongo2Es.Middleware
         /// <returns></returns>
         private BsonDocument HandleDoc(BsonDocument doc, string projectFields)
         {
+            projectFields = projectFields ?? "";
             var fieldsArr = projectFields.Split(",").ToList().ConvertAll(x => x.Split('.')[0].Trim());
             var names = doc.Names.ToList();
 
@@ -530,6 +531,7 @@ namespace Mongo2Es.Middleware
         /// <returns></returns>
         private List<string> UnsetDocHandle(BsonDocument doc, string projectFields)
         {
+            projectFields = projectFields ?? "";
             var fieldsArr = projectFields.Split(",").ToList().ConvertAll(x => x.Trim());
 
             return doc.Names.Intersect(fieldsArr).ToList();
