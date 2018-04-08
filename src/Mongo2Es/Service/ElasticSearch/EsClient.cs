@@ -27,7 +27,7 @@ namespace Mongo2Es.ElasticSearch
             nodeId = nodeid;
 
             var uris = url.Split(",").ToList().ConvertAll(x => new Uri(x));
-            var connectionPool = new SniffingConnectionPool(uris);
+            var connectionPool = new StaticConnectionPool(uris);
             var settings = new ConnectionConfiguration(connectionPool).RequestTimeout(TimeSpan.FromSeconds(30));
             this.client = new ElasticLowLevelClient(settings);
         }
@@ -58,7 +58,8 @@ namespace Mongo2Es.ElasticSearch
             }
             catch (Exception ex)
             {
-                LogUtil.LogInfo(logger, resStr.DebugInformation, nodeId);
+                if (resStr != null)
+                    LogUtil.LogInfo(logger, resStr.DebugInformation, nodeId);
                 LogUtil.LogError(logger, ex.ToString(), nodeId);
             }
 
@@ -90,7 +91,8 @@ namespace Mongo2Es.ElasticSearch
             }
             catch (Exception ex)
             {
-                LogUtil.LogInfo(logger, resStr.DebugInformation, nodeId);
+                if (resStr != null)
+                    LogUtil.LogInfo(logger, resStr.DebugInformation, nodeId);
                 LogUtil.LogError(logger, ex.ToString(), nodeId);
             }
 
@@ -129,7 +131,8 @@ namespace Mongo2Es.ElasticSearch
             }
             catch (Exception ex)
             {
-                LogUtil.LogInfo(logger, resStr.DebugInformation, nodeId);
+                if (resStr != null)
+                    LogUtil.LogInfo(logger, resStr.DebugInformation, nodeId);
                 LogUtil.LogError(logger, ex.ToString(), nodeId);
             }
 
@@ -168,7 +171,8 @@ namespace Mongo2Es.ElasticSearch
             }
             catch (Exception ex)
             {
-                LogUtil.LogInfo(logger, resStr.DebugInformation, nodeId);
+                if (resStr != null)
+                    LogUtil.LogInfo(logger, resStr.DebugInformation, nodeId);
                 LogUtil.LogError(logger, ex.ToString(), nodeId);
             }
 
@@ -201,7 +205,8 @@ namespace Mongo2Es.ElasticSearch
             }
             catch (Exception ex)
             {
-                LogUtil.LogInfo(logger, resStr.DebugInformation, nodeId);
+                if (resStr != null)
+                    LogUtil.LogInfo(logger, resStr.DebugInformation, nodeId);
                 LogUtil.LogError(logger, ex.ToString(), nodeId);
             }
 
@@ -230,7 +235,8 @@ namespace Mongo2Es.ElasticSearch
 
             catch (Exception ex)
             {
-                LogUtil.LogInfo(logger, resStr.DebugInformation, nodeId);
+                if (resStr != null)
+                    LogUtil.LogInfo(logger, resStr.DebugInformation, nodeId);
                 LogUtil.LogError(logger, ex.ToString(), nodeId);
             }
 
