@@ -34,7 +34,7 @@ dotnet publish --framework netcoreapp2.0 -o ./published
 ## Start up
 
 ```bash
-dotnet Mongo2Es.dll --port {port for web manage} --mongo {mongourl for config}
+dotnet Mongo2Es.dll --bindip {bindip for web manage} --mongo {mongourl for config}
 ```
 
 ## Result
