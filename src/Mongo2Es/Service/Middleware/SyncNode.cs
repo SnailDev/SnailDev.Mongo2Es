@@ -126,6 +126,11 @@ namespace Mongo2Es.Middleware
             CreateTime = DateTime.Now;
             Status = SyncStatus.WaitForScan;
         }
+
+        public override string ToString()
+        {
+            return this.ToJson();
+        }
     }
 
     /// <summary>

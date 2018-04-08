@@ -34,7 +34,7 @@ namespace Mongo2Es.Middleware
         {
             nodesRefreshTimer = new System.Timers.Timer
             {
-                Interval = 3 * 1000
+                Interval = 3 * 10000
             };
             nodesRefreshTimer.Elapsed += (sender, args) =>
             {
@@ -50,7 +50,10 @@ namespace Mongo2Es.Middleware
                         ThreadPool.QueueUserWorkItem(ExcuteScanProcess, node);
                     }
 
-                    scanNodesDic.AddOrUpdate(node.ID, node, (key, oldValue) => oldValue = node);
+                    if (scanNodesDic.TryGetValue(node.ID, out SyncNode oldNode) && !oldNode.ToString().Equals(node.ToString()))
+                    {
+                        scanNodesDic.AddOrUpdate(node.ID, node, (key, oldValue) => oldValue = node);
+                    }
                 }
                 foreach (var key in scanNodesDic.Keys.Except(scanIds))
                 {
@@ -69,7 +72,10 @@ namespace Mongo2Es.Middleware
                         ThreadPool.QueueUserWorkItem(ExcuteTailProcess, item);
                     }
 
-                    tailNodesDic.AddOrUpdate(item.ID, item, (key, oldValue) => oldValue = item);
+                    if (tailNodesDic.TryGetValue(item.ID, out SyncNode oldNode) && !oldNode.ToString().Equals(item.ToString()))
+                    {
+                        tailNodesDic.AddOrUpdate(item.ID, item, (key, oldValue) => oldValue = item);
+                    }
                 }
 
                 foreach (var key in tailNodesDic.Keys.Except(tailIds))
@@ -97,6 +103,7 @@ namespace Mongo2Es.Middleware
 
             try
             {
+                int times = 0;
                 // 记下当前Oplog的位置
                 var currentOplog = mongoClient.GetCollectionData<BsonDocument>("local", "oplog.rs", "{}", "{$natural:-1}", 1).FirstOrDefault();
                 node.OperTailSign = currentOplog["ts"].AsBsonTimestamp.Timestamp;
@@ -104,7 +111,6 @@ namespace Mongo2Es.Middleware
                 client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
                           Update.Set("OperTailSign", node.OperTailSign).Set("OperTailSignExt", node.OperTailSignExt).ToBsonDocument());
 
-                int times = 0;
                 var filter = "{}";  // string.IsNullOrEmpty(node.OperScanSign) ? "{}" : $"{{'_id':{{ $gt:new ObjectId('{node.OperScanSign}')}}}}";
                 var data = mongoClient.GetCollectionData<BsonDocument>(node.DataBase, node.Collection, filter, limit: 1);
                 while (data.Count() > 0)
@@ -137,7 +143,7 @@ namespace Mongo2Es.Middleware
 
                     string nodeid = node.ID;
                     string nodeName = node.Name;
-                    if (!scanNodesDic.TryGetValue(node.ID, out node))
+                    if (!scanNodesDic.TryGetValue(node.ID, out SyncNode oldNode))
                     {
                         times++;
                         if (times > 10)
@@ -148,6 +154,7 @@ namespace Mongo2Es.Middleware
                     }
                     else
                     {
+                        node = oldNode; times = 0;
                         if (node.Switch == SyncSwitch.Stoping)
                         {
                             node.Switch = SyncSwitch.Stop;
@@ -198,7 +205,7 @@ namespace Mongo2Es.Middleware
                     {
                         foreach (var opLog in cursor.ToEnumerable())
                         {
-                            if (!tailNodesDic.TryGetValue(node.ID, out node))
+                            if (!tailNodesDic.TryGetValue(node.ID, out SyncNode oldNode))
                             {
                                 times++;
                                 if (times > 10)
@@ -209,6 +216,8 @@ namespace Mongo2Es.Middleware
                             }
                             else
                             {
+                                node = oldNode; times = 0;
+
                                 if (node.Switch == SyncSwitch.Stoping)
                                 {
                                     node.Switch = SyncSwitch.Stop;
@@ -218,6 +227,7 @@ namespace Mongo2Es.Middleware
                                     return;
                                 }
                             }
+
 
                             bool flag = true;
                             switch (opLog["op"].AsString)
