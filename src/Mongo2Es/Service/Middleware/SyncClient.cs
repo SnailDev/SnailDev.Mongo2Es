@@ -2,6 +2,7 @@
 using Mongo2Es.Log;
 using Mongo2Es.Mongo;
 using MongoDB.Bson;
+using MongoDB.Bson.IO;
 using MongoDB.Driver;
 using MongoDB.Driver.Builders;
 using NLog;
@@ -395,7 +396,6 @@ namespace Mongo2Es.Middleware
         private BsonDocument HandleDoc(BsonDocument doc, string projectFields)
         {
             var fieldsArr = projectFields.Split(",").ToList().ConvertAll(x => x.Split('.')[0].Trim());
-            //var subProjectFields = string.Join(',', projectFields.Split(",").ToList().ConvertAll(x => x.Contains(".") ? x.Substring(x.IndexOf(".") + 1).Trim() : null));
             var names = doc.Names.ToList();
 
             if (fieldsArr.Count(x => string.IsNullOrWhiteSpace(x)) == fieldsArr.Count)
@@ -466,7 +466,7 @@ namespace Mongo2Es.Middleware
                 var newDoc = HandleDoc(_doc, projectFields);
 
                 if (newDoc.Names.Count() > 0)
-                    handDocs.Add(newDoc.ToJson());
+                    handDocs.Add(newDoc.ToJson(new JsonWriterSettings { OutputMode = JsonOutputMode.Strict }));
             }
 
 
@@ -511,9 +511,9 @@ namespace Mongo2Es.Middleware
                 var newDoc = HandleDoc(doc, projectFields);
 
                 if (string.IsNullOrWhiteSpace(linkfield))
-                    handDocs.Add(newDoc.ToJson());
+                    handDocs.Add(newDoc.ToJson(new JsonWriterSettings { OutputMode = JsonOutputMode.Strict }));
                 else
-                    handDocs.Add(new { doc = newDoc }.ToJson());
+                    handDocs.Add(new { doc = newDoc }.ToJson(new JsonWriterSettings { OutputMode = JsonOutputMode.Strict }));
             }
 
 

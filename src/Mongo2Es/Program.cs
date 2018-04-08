@@ -43,8 +43,8 @@ namespace Mongo2Es
                      .UseStartup<Startup>()
                      .Build();
 
-                 host.Run();
                  logger.Info("Web Start Completed.");
+                 host.Run();
              });
 
             syncSerivce.Start();

@@ -1,6 +1,7 @@
 ﻿using Elasticsearch.Net;
 using Mongo2Es.Log;
 using MongoDB.Bson;
+using MongoDB.Bson.IO;
 using MongoDB.Driver.Builders;
 using Newtonsoft.Json.Linq;
 using NLog;
@@ -40,7 +41,7 @@ namespace Mongo2Es.ElasticSearch
 
             try
             {
-                var resStr = client.Index<StringResponse>(index, type, id, PostData.String(doc.ToJson()));
+                var resStr = client.Index<StringResponse>(index, type, id, PostData.String(doc.ToJson(new JsonWriterSettings { OutputMode = JsonOutputMode.Strict })));
                 var resObj = JObject.Parse(resStr.Body);
                 if ((int)resObj["_shards"]["successful"] > 0)
                 {
@@ -144,7 +145,7 @@ namespace Mongo2Es.ElasticSearch
 
             try
             {
-                var resStr = client.Update<StringResponse>(index, type, id, PostData.String(BsonDocument.Parse($"{{'doc':{doc}}}").ToJson()));
+                var resStr = client.Update<StringResponse>(index, type, id, PostData.String(BsonDocument.Parse($"{{'doc':{doc}}}").ToJson(new JsonWriterSettings { OutputMode = JsonOutputMode.Strict })));
                 var resObj = JObject.Parse(resStr.Body);
                 if ((int)resObj["_shards"]["total"] == 0 || (int)resObj["_shards"]["successful"] > 0)
                 {
