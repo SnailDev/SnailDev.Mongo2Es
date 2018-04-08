@@ -34,7 +34,7 @@ namespace Mongo2Es.Middleware
         {
             nodesRefreshTimer = new System.Timers.Timer
             {
-                Interval = 3 * 10000
+                Interval = 3 * 1000 * 10
             };
             nodesRefreshTimer.Elapsed += (sender, args) =>
             {
@@ -55,6 +55,7 @@ namespace Mongo2Es.Middleware
                         scanNodesDic.AddOrUpdate(node.ID, node, (key, oldValue) => oldValue = node);
                     }
                 }
+
                 foreach (var key in scanNodesDic.Keys.Except(scanIds))
                 {
                     scanNodesDic.Remove(key, out SyncNode node);
@@ -103,7 +104,7 @@ namespace Mongo2Es.Middleware
 
             try
             {
-                int times = 0;
+                // int times = 0;
                 // 记下当前Oplog的位置
                 var currentOplog = mongoClient.GetCollectionData<BsonDocument>("local", "oplog.rs", "{}", "{$natural:-1}", 1).FirstOrDefault();
                 node.OperTailSign = currentOplog["ts"].AsBsonTimestamp.Timestamp;
@@ -141,20 +142,33 @@ namespace Mongo2Es.Middleware
                         return;
                     }
 
-                    string nodeid = node.ID;
-                    string nodeName = node.Name;
-                    if (!scanNodesDic.TryGetValue(node.ID, out SyncNode oldNode))
+                    //string nodeid = node.ID;
+                    //string nodeName = node.Name;
+                    //if (!scanNodesDic.TryGetValue(node.ID, out SyncNode oldNode))
+                    //{
+                    //    times++;
+                    //    if (times > 10)
+                    //    {
+                    //        LogUtil.LogInfo(logger, $"全量同步节点({nodeName})已删除, scan线程停止", nodeid);
+                    //        return;
+                    //    }
+                    //}
+                    //else
+                    //{
+                    //    node = oldNode; times = 0;
+                    //    if (node.Switch == SyncSwitch.Stoping)
+                    //    {
+                    //        node.Switch = SyncSwitch.Stop;
+                    //        client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
+                    //           Update.Set("Switch", node.Switch).ToBsonDocument());
+                    //        LogUtil.LogInfo(logger, $"全量同步节点({node.Name})已停止, scan线程停止", node.ID);
+                    //        return;
+                    //    }
+                    //}
+
+                    if (scanNodesDic.TryGetValue(node.ID, out SyncNode oldNode))
                     {
-                        times++;
-                        if (times > 10)
-                        {
-                            LogUtil.LogInfo(logger, $"全量同步节点({nodeName})已删除, scan线程停止", nodeid);
-                            return;
-                        }
-                    }
-                    else
-                    {
-                        node = oldNode; times = 0;
+                        node = oldNode;
                         if (node.Switch == SyncSwitch.Stoping)
                         {
                             node.Switch = SyncSwitch.Stop;
@@ -205,19 +219,32 @@ namespace Mongo2Es.Middleware
                     {
                         foreach (var opLog in cursor.ToEnumerable())
                         {
-                            if (!tailNodesDic.TryGetValue(node.ID, out SyncNode oldNode))
-                            {
-                                times++;
-                                if (times > 10)
-                                {
-                                    LogUtil.LogInfo(logger, $"增量同步节点({node.Name})已删除, tail线程停止", node.ID);
-                                    return;
-                                }
-                            }
-                            else
-                            {
-                                node = oldNode; times = 0;
+                            //if (!tailNodesDic.TryGetValue(node.ID, out SyncNode oldNode))
+                            //{
+                            //    times++;
+                            //    if (times > 10)
+                            //    {
+                            //        LogUtil.LogInfo(logger, $"增量同步节点({node.Name})已删除, tail线程停止", node.ID);
+                            //        return;
+                            //    }
+                            //}
+                            //else
+                            //{
+                            //    node = oldNode; times = 0;
 
+                            //    if (node.Switch == SyncSwitch.Stoping)
+                            //    {
+                            //        node.Switch = SyncSwitch.Stop;
+                            //        client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
+                            //                            Update.Set("Switch", node.Switch).ToBsonDocument());
+                            //        LogUtil.LogInfo(logger, $"增量同步节点({node.Name})已停止, tail线程停止", node.ID);
+                            //        return;
+                            //    }
+                            //}
+
+                            if (tailNodesDic.TryGetValue(node.ID, out SyncNode oldNode))
+                            {
+                                node = oldNode;
                                 if (node.Switch == SyncSwitch.Stoping)
                                 {
                                     node.Switch = SyncSwitch.Stop;
