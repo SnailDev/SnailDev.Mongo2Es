@@ -119,17 +119,17 @@ namespace Mongo2Es.Middleware
                     {
                         LogUtil.LogInfo(logger, $"文档(count:{data.Count()})写入ES成功", node.ID);
 
-                        if (string.IsNullOrWhiteSpace(node.OperScanSign))
-                        {
-                            if (esClient.SetIndexRefreshAndReplia(node.Index, "-1", 0))
-                            {
-                                LogUtil.LogInfo(logger, $"ES 索引写入性能优化成功", node.ID);
-                            }
-                            else
-                            {
-                                LogUtil.LogInfo(logger, $"ES 索引写入性能优化失败", node.ID);
-                            }
-                        }
+                        //if (string.IsNullOrWhiteSpace(node.OperScanSign))
+                        //{
+                        //    if (esClient.SetIndexRefreshAndReplia(node.Index, "-1", 0))
+                        //    {
+                        //        LogUtil.LogInfo(logger, $"ES 索引写入性能优化成功", node.ID);
+                        //    }
+                        //    else
+                        //    {
+                        //        LogUtil.LogInfo(logger, $"ES 索引写入性能优化失败", node.ID);
+                        //    }
+                        //}
 
                         node.Status = SyncStatus.ProcessScan;
                         node.OperScanSign = data.Last()["_id"].ToString();
@@ -141,7 +141,7 @@ namespace Mongo2Es.Middleware
                         filter = data.Last()["_id"].IsObjectId ?
                             $"{{'_id':{{ $gt:new ObjectId('{node.OperScanSign}')}}}}"
                             : $"{{'_id':{{ $gt:{node.OperScanSign}}}}}";
-                        data = mongoClient.GetCollectionData<BsonDocument>(node.DataBase, node.Collection, filter, limit: 1000);
+                        data = mongoClient.GetCollectionData<BsonDocument>(node.DataBase, node.Collection, filter, limit: 600);
                     }
                     else
                     {
@@ -167,14 +167,14 @@ namespace Mongo2Es.Middleware
                     }
                 }
 
-                if (esClient.SetIndexRefreshAndReplia(node.Index))
-                {
-                    LogUtil.LogInfo(logger, $"ES 索引{node.Index}副本及刷新时间还原成功", node.ID);
-                }
-                else
-                {
-                    LogUtil.LogInfo(logger, $"ES 索引{node.Index}副本及刷新时间还原失败，可手动还原", node.ID);
-                }
+                //if (esClient.SetIndexRefreshAndReplia(node.Index))
+                //{
+                //    LogUtil.LogInfo(logger, $"ES 索引{node.Index}副本及刷新时间还原成功", node.ID);
+                //}
+                //else
+                //{
+                //    LogUtil.LogInfo(logger, $"ES 索引{node.Index}副本及刷新时间还原失败，可手动还原", node.ID);
+                //}
 
                 node.Status = SyncStatus.WaitForTail;
                 client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
