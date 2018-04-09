@@ -34,7 +34,7 @@ namespace Mongo2Es.Middleware
         {
             nodesRefreshTimer = new System.Timers.Timer
             {
-                Interval = 3 * 1000 * 10
+                Interval = 3 * 1000 * 1
             };
             nodesRefreshTimer.Elapsed += (sender, args) =>
             {
@@ -119,6 +119,18 @@ namespace Mongo2Es.Middleware
                     {
                         LogUtil.LogInfo(logger, $"文档(count:{data.Count()})写入ES成功", node.ID);
 
+                        if (string.IsNullOrWhiteSpace(node.OperScanSign))
+                        {
+                            if (esClient.SetIndexRefreshAndReplia(node.Index, "-1", 0))
+                            {
+                                LogUtil.LogInfo(logger, $"ES 索引写入性能优化成功", node.ID);
+                            }
+                            else
+                            {
+                                LogUtil.LogInfo(logger, $"ES 索引写入性能优化失败", node.ID);
+                            }
+                        }
+
                         node.Status = SyncStatus.ProcessScan;
                         node.OperScanSign = data.Last()["_id"].ToString();
                         //node.OperTailSign = client.GetTimestampFromDateTime(DateTime.UtcNow);
@@ -153,6 +165,15 @@ namespace Mongo2Es.Middleware
                             return;
                         }
                     }
+                }
+
+                if (esClient.SetIndexRefreshAndReplia(node.Index))
+                {
+                    LogUtil.LogInfo(logger, $"ES 索引{node.Index}副本及刷新时间还原成功", node.ID);
+                }
+                else
+                {
+                    LogUtil.LogInfo(logger, $"ES 索引{node.Index}副本及刷新时间还原失败，可手动还原", node.ID);
                 }
 
                 node.Status = SyncStatus.WaitForTail;

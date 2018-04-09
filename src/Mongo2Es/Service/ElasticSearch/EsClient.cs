@@ -33,6 +33,42 @@ namespace Mongo2Es.ElasticSearch
         }
 
         /// <summary>
+        /// 优化写入性能
+        /// </summary>
+        /// <param name="index"></param>
+        /// <param name="refresh"></param>
+        /// <param name="replia"></param>
+        /// <returns></returns>
+        public bool SetIndexRefreshAndReplia(string index, string refresh = "30s", int replia = 1)
+        {
+            bool flag = false;
+            StringResponse resStr = null;
+            try
+            {
+                resStr = client.IndicesPutSettings<StringResponse>(index,
+                    PostData.String($"{{\"index\" : {{\"number_of_replicas\" : {replia},\"refresh_interval\":\"{refresh}\"}}}}"));
+                var resObj = JObject.Parse(resStr.Body);
+                if ((bool)resObj["acknowledged"])
+                {
+                    flag = true;
+                }
+                else
+                {
+                    LogUtil.LogInfo(logger, resStr.DebugInformation, nodeId);
+                }
+            }
+            catch (Exception ex)
+            {
+                if (resStr != null)
+                    LogUtil.LogInfo(logger, resStr.DebugInformation, nodeId);
+                LogUtil.LogError(logger, ex.ToString(), nodeId);
+            }
+
+            return flag;
+        }
+
+
+        /// <summary>
         /// 插入文档
         /// </summary>
         /// <param name="index"></param>

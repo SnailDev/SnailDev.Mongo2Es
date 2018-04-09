@@ -11,3 +11,5 @@ published
 *.pubxml
 .vs
 /source/.vs
+
+launchSettings.json
