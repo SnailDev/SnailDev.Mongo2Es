@@ -412,7 +412,14 @@ namespace Mongo2Es.Middleware
                     }
                     else
                     {
-                        newDoc.Add(new BsonElement(name.ToLower(), doc[name]));
+                        if (doc[name].IsBsonDateTime || doc[name].IsValidDateTime)
+                        {
+                            newDoc.Add(new BsonElement(name.ToLower(), doc[name].ToString()));
+                        }
+                        else
+                        {
+                            newDoc.Add(new BsonElement(name.ToLower(), doc[name]));
+                        }
                     }
                 }
             }
