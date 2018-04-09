@@ -34,7 +34,7 @@ namespace Mongo2Es.Middleware
         {
             nodesRefreshTimer = new System.Timers.Timer
             {
-                Interval = 3 * 1000 * 1
+                Interval = 3 * 1000 * 5
             };
             nodesRefreshTimer.Elapsed += (sender, args) =>
             {
@@ -50,7 +50,12 @@ namespace Mongo2Es.Middleware
                         ThreadPool.QueueUserWorkItem(ExcuteScanProcess, node);
                     }
 
-                    if (scanNodesDic.TryGetValue(node.ID, out SyncNode oldNode) && !oldNode.ToString().Equals(node.ToString()))
+                    if (scanNodesDic.TryGetValue(node.ID, out SyncNode oldNode))
+                    {
+                        if (!oldNode.ToString().Equals(node.ToString()))
+                            scanNodesDic.AddOrUpdate(node.ID, node, (key, oldValue) => oldValue = node);
+                    }
+                    else
                     {
                         scanNodesDic.AddOrUpdate(node.ID, node, (key, oldValue) => oldValue = node);
                     }
@@ -73,7 +78,12 @@ namespace Mongo2Es.Middleware
                         ThreadPool.QueueUserWorkItem(ExcuteTailProcess, item);
                     }
 
-                    if (tailNodesDic.TryGetValue(item.ID, out SyncNode oldNode) && !oldNode.ToString().Equals(item.ToString()))
+                    if (tailNodesDic.TryGetValue(item.ID, out SyncNode oldNode))
+                    {
+                        if (!oldNode.ToString().Equals(item.ToString()))
+                            tailNodesDic.AddOrUpdate(item.ID, item, (key, oldValue) => oldValue = item);
+                    }
+                    else
                     {
                         tailNodesDic.AddOrUpdate(item.ID, item, (key, oldValue) => oldValue = item);
                     }
@@ -228,6 +238,7 @@ namespace Mongo2Es.Middleware
                             }
 
                             bool flag = true;
+                           
                             switch (opLog["op"].AsString)
                             {
                                 case "i":
