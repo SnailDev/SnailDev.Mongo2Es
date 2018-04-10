@@ -441,11 +441,11 @@ namespace Mongo2Es.Middleware
             var fieldsArr = projectFields.Split(",").ToList().ConvertAll(x => x.Split('.')[0].Trim());
             var names = doc.Names.ToList();
 
-            //if (fieldsArr.Count(x => string.IsNullOrWhiteSpace(x)) == fieldsArr.Count)
-            //{
-            //    fieldsArr = names;
-            //    fieldsArr.Remove("_id");
-            //}
+            if (fieldsArr.Count(x => string.IsNullOrWhiteSpace(x)) == fieldsArr.Count)
+            {
+                fieldsArr = names;
+                fieldsArr.Remove("_id");
+            }
 
             BsonDocument newDoc = new BsonDocument();
             if (doc.Contains("_id"))
