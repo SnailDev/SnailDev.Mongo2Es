@@ -41,7 +41,7 @@ namespace Mongo2Es.Middleware
                 var nodes = client.GetCollectionData<SyncNode>(database, collection);
 
                 #region Scan
-                var scanNodes = nodes.Where(x => x.Status == SyncStatus.WaitForScan && x.Switch != SyncSwitch.Stop);
+                var scanNodes = nodes.Where(x=>(x.Status == SyncStatus.WaitForScan || x.Status == SyncStatus.ProcessScan) && x.Switch != SyncSwitch.Stop);
                 var scanIds = scanNodes.Select(x => x.ID);
                 foreach (var node in scanNodes)
                 {
