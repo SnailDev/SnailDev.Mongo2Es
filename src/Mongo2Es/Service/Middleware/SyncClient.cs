@@ -114,6 +114,29 @@ namespace Mongo2Es.Middleware
 
             try
             {
+                if (!esClient.IsIndexExsit(node.Index))
+                {
+                    LogUtil.LogInfo(logger, $"检测索引{node.Index}未创建，正在创建...", node.ID);
+                    if (esClient.CreateIndex(node.Index))
+                    {
+                        LogUtil.LogInfo(logger, $"索引{node.Index}创建成功.", node.ID);
+                    }
+                    else
+                    {
+                        throw new Exception($"索引{node.Index}创建失败.");
+                    }
+                }
+
+                LogUtil.LogInfo(logger, $"正在更新类型{node.Type}的mapping", node.ID);
+                if (esClient.PutMapping(node.Index, node.Type, node.Mapping))
+                {
+                    LogUtil.LogInfo(logger, $"类型{node.Type}的mapping更新成功", node.ID);
+                }
+                else
+                {
+                    throw new Exception($"类型{node.Type}的mapping更新失败");
+                }
+
                 // 记下当前Oplog的位置
                 var currentOplog = mongoClient.GetCollectionData<BsonDocument>("local", "oplog.rs", "{}", "{$natural:-1}", 1).FirstOrDefault();
                 node.OperTailSign = currentOplog["ts"].AsBsonTimestamp.Timestamp;
@@ -121,7 +144,7 @@ namespace Mongo2Es.Middleware
                 client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
                           Update.Set("OperTailSign", node.OperTailSign).Set("OperTailSignExt", node.OperTailSignExt).ToBsonDocument());
 
-                var filter = "{}";  // string.IsNullOrEmpty(node.OperScanSign) ? "{}" : $"{{'_id':{{ $gt:new ObjectId('{node.OperScanSign}')}}}}";
+                var filter = "{}";
                 var data = mongoClient.GetCollectionData<BsonDocument>(node.DataBase, node.Collection, filter, limit: 1);
                 while (data.Count() > 0)
                 {
@@ -177,18 +200,19 @@ namespace Mongo2Es.Middleware
                     }
                 }
 
-                //if (esClient.SetIndexRefreshAndReplia(node.Index))
-                //{
-                //    LogUtil.LogInfo(logger, $"ES 索引{node.Index}副本及刷新时间还原成功", node.ID);
-                //}
-                //else
-                //{
-                //    LogUtil.LogInfo(logger, $"ES 索引{node.Index}副本及刷新时间还原失败，可手动还原", node.ID);
-                //}
+                if (esClient.SetIndexRefreshAndReplia(node.Index))
+                {
+                    LogUtil.LogInfo(logger, $"ES 索引{node.Index}副本及刷新时间还原成功", node.ID);
+                }
+                else
+                {
+                    LogUtil.LogInfo(logger, $"ES 索引{node.Index}副本及刷新时间还原失败，可手动还原", node.ID);
+                }
 
                 node.Status = SyncStatus.WaitForTail;
                 client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
                          Update.Set("Status", node.Status).ToBsonDocument());
+                LogUtil.LogInfo(logger, $"索引{node.Index}正在等待增量同步...", node.ID);
             }
             catch (Exception ex)
             {
@@ -238,7 +262,7 @@ namespace Mongo2Es.Middleware
                             }
 
                             bool flag = true;
-                           
+
                             switch (opLog["op"].AsString)
                             {
                                 case "i":
@@ -417,11 +441,11 @@ namespace Mongo2Es.Middleware
             var fieldsArr = projectFields.Split(",").ToList().ConvertAll(x => x.Split('.')[0].Trim());
             var names = doc.Names.ToList();
 
-            if (fieldsArr.Count(x => string.IsNullOrWhiteSpace(x)) == fieldsArr.Count)
-            {
-                fieldsArr = names;
-                fieldsArr.Remove("_id");
-            }
+            //if (fieldsArr.Count(x => string.IsNullOrWhiteSpace(x)) == fieldsArr.Count)
+            //{
+            //    fieldsArr = names;
+            //    fieldsArr.Remove("_id");
+            //}
 
             BsonDocument newDoc = new BsonDocument();
             if (doc.Contains("_id"))
@@ -573,7 +597,7 @@ namespace Mongo2Es.Middleware
         {
             projectFields = projectFields ?? "";
             var fieldsArr = projectFields.Split(",").ToList().ConvertAll(x => x.Trim());
-            fieldsArr.Remove("_id");
+            // fieldsArr.Remove("_id");
 
             return doc.Names.Intersect(fieldsArr).ToList();
         }

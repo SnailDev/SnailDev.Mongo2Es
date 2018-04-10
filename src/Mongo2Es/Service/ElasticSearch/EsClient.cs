@@ -33,6 +33,102 @@ namespace Mongo2Es.ElasticSearch
         }
 
         /// <summary>
+        /// 检测索引是否已经存在
+        /// </summary>
+        /// <param name="index"></param>
+        /// <returns></returns>
+        public bool IsIndexExsit(string index)
+        {
+            bool flag = false;
+            StringResponse resStr = null;
+            try
+            {
+                resStr = client.IndicesExists<StringResponse>(index);
+                if (resStr.HttpStatusCode == 200)
+                {
+                    flag = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                if (resStr != null)
+                    LogUtil.LogInfo(logger, resStr.DebugInformation, nodeId);
+                LogUtil.LogError(logger, ex.ToString(), nodeId);
+            }
+
+            return flag;
+        }
+
+        /// <summary>
+        /// 创建索引
+        /// </summary>
+        /// <param name="index"></param>
+        /// <param name="shards"></param>
+        /// <returns></returns>
+        public bool CreateIndex(string index, int shards = 5)
+        {
+            bool flag = false;
+            StringResponse resStr = null;
+            try
+            {
+                resStr = client.IndicesCreate<StringResponse>(index,
+                    PostData.String($"{{\"settings\" : {{\"index\" : {{\"number_of_replicas\" : 0, \"number_of_shards\":\"{shards}\",\"refresh_interval\":\"-1\"}}}}}}"));
+                var resObj = JObject.Parse(resStr.Body);
+                if ((bool)resObj["acknowledged"])
+                {
+                    flag = true;
+                }
+                else
+                {
+                    LogUtil.LogInfo(logger, resStr.DebugInformation, nodeId);
+                }
+            }
+            catch (Exception ex)
+            {
+                if (resStr != null)
+                    LogUtil.LogInfo(logger, resStr.DebugInformation, nodeId);
+                LogUtil.LogError(logger, ex.ToString(), nodeId);
+            }
+
+            return flag;
+        }
+
+        /// <summary>
+        /// 创建更新Mapping
+        /// </summary>
+        /// <param name="index"></param>
+        /// <param name="type"></param>
+        /// <param name="mapping"></param>
+        /// <returns></returns>
+        public bool PutMapping(string index, string type, string mapping)
+        {
+            bool flag = false;
+            StringResponse resStr = null;
+            try
+            {
+                resStr = client.IndicesPutMapping<StringResponse>(index, type,
+                    PostData.String(mapping));
+                var resObj = JObject.Parse(resStr.Body);
+                if ((bool)resObj["acknowledged"])
+                {
+                    flag = true;
+                }
+                else
+                {
+                    LogUtil.LogInfo(logger, resStr.DebugInformation, nodeId);
+                }
+            }
+            catch (Exception ex)
+            {
+                if (resStr != null)
+                    LogUtil.LogInfo(logger, resStr.DebugInformation, nodeId);
+                LogUtil.LogError(logger, ex.ToString(), nodeId);
+            }
+
+            return flag;
+        }
+
+        /// <summary>
         /// 优化写入性能
         /// </summary>
         /// <param name="index"></param>

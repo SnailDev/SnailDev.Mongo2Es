@@ -4,6 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Text;
 
 namespace Mongo2Es.Tests
 {
@@ -24,6 +26,7 @@ namespace Mongo2Es.Tests
             //var bson = BsonDocument.Parse(@"{}");
             //string project = "";
             //var doc = HandleDoc(bson, project);
+            PostData(Encoding.Default.GetBytes("123"), Encoding.Default.GetBytes("123"));
 
             Console.ReadLine();
         }
@@ -172,5 +175,57 @@ namespace Mongo2Es.Tests
 
             return newDoc;
         }
+
+        private static int PostData(byte[] aesKeyEnc, byte[] jsonEnc)
+        {
+            string url = "http://test.openrcv.baidu.com/1017/agent.gif";
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+            request.Method = "POST";
+            request.ContentType = "text/plain; charset=UTF-8";
+            request.CachePolicy = new System.Net.Cache.RequestCachePolicy(System.Net.Cache.RequestCacheLevel.NoCacheNoStore);
+            //request.Proxy = WebProxy.GetDefaultProxy();
+            //request.Proxy = new WebProxy("127.0.0.1:8888", true);
+            Stream outstream = request.GetRequestStream();
+
+            //MemoryStream stream = new MemoryStream();
+            BinaryWriter writer = new BinaryWriter(outstream);
+            writer.Write(WriterInt(0x484D3031));
+            writer.Write(WriterInt(1));
+            writer.Write(WriterInt(1017));
+            writer.Write(WriterInt((long)0));
+            writer.Write(WriterInt((short)2));
+            writer.Write(WriterInt((short)1));
+            writer.Write(WriterInt(0x484D3031));
+            writer.Write(WriterInt(aesKeyEnc.Length));
+            writer.Write(aesKeyEnc);
+            writer.Write(WriterInt(jsonEnc.Length));
+            writer.Write(jsonEnc);
+            writer.Flush();
+            writer.Close();
+            // byte[] data = stream.ToArray();
+            //outstream.Write(data, 0, data.Length);
+            //outstream.Flush();
+            //outstream.Close();
+
+            HttpWebResponse res;
+            try
+            {
+                res = request.GetResponse() as HttpWebResponse;
+            }
+            catch (WebException ex)
+            {
+                res = (HttpWebResponse)ex.Response;
+            }
+
+            return (int)res.StatusCode;
+        }
+
+        public static byte[] WriterInt(dynamic value)
+        {
+            byte[] bs = BitConverter.GetBytes(value);
+            Array.Reverse(bs);
+            return bs;
+        }
+
     }
 }

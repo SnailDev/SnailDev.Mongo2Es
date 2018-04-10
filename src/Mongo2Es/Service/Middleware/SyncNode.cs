@@ -77,6 +77,11 @@ namespace Mongo2Es.Middleware
         /// </summary>
         public string Type { get; set; }
 
+        /// <summary>
+        /// mapping
+        /// </summary>
+        public string Mapping { get; set; }
+
         ///// <summary>
         ///// 创建人
         ///// </summary>
