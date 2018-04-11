@@ -35,6 +35,7 @@ namespace Mongo2Es.Pages.SyncNode
             if (string.IsNullOrWhiteSpace(id))
             {
                 Node = new Middleware.SyncNode();
+                Node.Mapping = "{\"properties\": {}}";
             }
             else
             {
@@ -65,6 +66,23 @@ namespace Mongo2Es.Pages.SyncNode
             }
 
             return RedirectToPage("/SyncNode/Index");
+        }
+
+        public IActionResult OnGetDBs(string mongo)
+        {
+            var mongoclient = new Mongo2Es.Mongo.MongoClient(mongo);
+            var dbs = mongoclient.ListDataBases();
+            var dbNames = dbs.Select(x => x["name"].AsString).Where(x => !x.Equals("admin", StringComparison.CurrentCultureIgnoreCase) && !x.Equals("local", StringComparison.CurrentCultureIgnoreCase));
+
+            return new JsonResult(new { m = 0, d = dbNames, e = "" });
+        }
+
+        public IActionResult OnGetCols(string mongo, string db)
+        {
+            var mongoclient = new Mongo2Es.Mongo.MongoClient(mongo);
+            var cols = mongoclient.ListCollections(db);
+
+            return new JsonResult(new { m = 0, d = cols, e = "" });
         }
     }
 }

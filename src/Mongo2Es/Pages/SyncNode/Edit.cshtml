@@ -38,6 +38,9 @@
         <label class="col-sm-2 control-label" asp-for="Node.ParentDataBase"></label>
         <div class="col-sm-3">
             <input class="form-control" asp-for="Node.ParentDataBase" />
+            @*<select class="form-control" asp-for="Node.ParentDataBase" >
+                <option>Please select one</option>
+            </select>*@
             <span asp-validation-for="Node.ParentDataBase"></span>
         </div>
     </div>
@@ -46,6 +49,9 @@
         <label class="col-sm-2 control-label" asp-for="Node.ParentCollection"></label>
         <div class="col-sm-3">
             <input class="form-control" asp-for="Node.ParentCollection" />
+            @*<select class="form-control" asp-for="Node.ParentCollection">
+                <option>Please select one</option>
+            </select>*@
             <span asp-validation-for="Node.ParentCollection"></span>
         </div>
     </div>
@@ -62,6 +68,9 @@
         <label class="col-sm-2 control-label" asp-for="Node.DataBase"></label>
         <div class="col-sm-3">
             <input class="form-control" asp-for="Node.DataBase" />
+            @*<select class="form-control" asp-for="Node.DataBase">
+                <option>Please select one</option>
+            </select>*@
             <span asp-validation-for="Node.DataBase"></span>
         </div>
     </div>
@@ -70,6 +79,9 @@
         <label class="col-sm-2 control-label" asp-for="Node.Collection"></label>
         <div class="col-sm-3">
             <input class="form-control" asp-for="Node.Collection" />
+            @*<select class="form-control" asp-for="Node.Collection">
+                <option>Please select one</option>
+            </select>*@
             <span asp-validation-for="Node.Collection"></span>
         </div>
     </div>
@@ -85,7 +97,7 @@
     <div class="form-group">
         <label class="col-sm-2 control-label" asp-for="Node.ProjectFields"></label>
         <div class="col-sm-5">
-            <input class="form-control" asp-for="Node.ProjectFields" />(空为全部字段同步, 字段以英文,号间隔)
+            <input class="form-control" asp-for="Node.ProjectFields" />(空为全部字段同步, 字段以英文,号间隔)@*<a>加载字段</a>*@
             <span asp-validation-for="Node.ProjectFields"></span>
         </div>
     </div>
@@ -130,3 +142,30 @@
         </div>
     </div>
 </form>
+
+
+
+@section scripts
+    {
+    <script>
+        //$('#Node_MongoUrl').change(function () {
+        //    var curValue = $(this).val();
+        //    $('#Node_ParentDataBase').empty();
+        //    $('#Node_ParentCollection').empty();
+        //    $('#Node_DataBase').empty();
+        //    $('#Node_Collection').empty();
+
+        //    $.get("/SyncNode/Edit?mongo=" + curValue + "&handler=dbs", function (res, status) {
+        //        var data = res.d;
+        //        console.log(data);
+        //        for (var i = 0; i < data.length; i++) {
+        //            var option = '<option value="' + data[i] + '">' + data[i] +'</option>';
+        //            $('#Node_ParentDataBase').append(option);
+        //            $('#Node_DataBase').append(option);
+        //        }
+
+        //    }, "json");
+        //})
+
+    </script>
+}
