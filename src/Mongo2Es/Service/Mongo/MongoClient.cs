@@ -210,7 +210,7 @@ namespace Mongo2Es.Mongo
                 // Our cursor is a tailable cursor and informs the server to await
                 OplogReplay = true,
                 CursorType = CursorType.TailableAwait,
-                NoCursorTimeout = true,
+                //NoCursorTimeout = true,
             };
             return collection.FindSync(filterFunc, options);
         }

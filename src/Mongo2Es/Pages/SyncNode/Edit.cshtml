@@ -85,7 +85,7 @@
     <div class="form-group">
         <label class="col-sm-2 control-label" asp-for="Node.ProjectFields"></label>
         <div class="col-sm-5">
-            <input class="form-control" asp-for="Node.ProjectFields" />
+            <input class="form-control" asp-for="Node.ProjectFields" />(空为全部字段同步, 字段以英文,号间隔)
             <span asp-validation-for="Node.ProjectFields"></span>
         </div>
     </div>
@@ -118,7 +118,7 @@
 
     <div class="form-group">
         <label class="col-sm-2 control-label" asp-for="Node.Mapping"></label>
-        <div class="col-sm-3">
+        <div class="col-sm-5">
             <textarea class="form-control" asp-for="Node.Mapping"></textarea>
             <span asp-validation-for="Node.Mapping"></span>
         </div>
