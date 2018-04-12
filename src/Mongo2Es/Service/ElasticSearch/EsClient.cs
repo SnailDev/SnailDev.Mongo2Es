@@ -128,6 +128,53 @@ namespace Mongo2Es.ElasticSearch
             return flag;
         }
 
+        public string GetMapping(string index)
+        {
+            string mapping = "";
+            StringResponse resStr = null;
+            try
+            {
+                resStr = client.IndicesGetMapping<StringResponse>(index);
+                var resObj = JObject.Parse(resStr.Body);
+                mapping = resObj[index]["mappings"][index].ToString();
+            }
+            catch (Exception ex)
+            {
+                if (resStr != null)
+                    LogUtil.LogInfo(logger, resStr.DebugInformation, nodeId);
+                LogUtil.LogError(logger, ex.ToString(), nodeId);
+            }
+
+            return mapping;
+        }
+
+        public bool DeleteIndex(string index)
+        {
+            bool flag = false;
+            StringResponse resStr = null;
+            try
+            {
+                resStr = client.IndicesDelete<StringResponse>(index);
+                var resObj = JObject.Parse(resStr.Body);
+                if ((bool)resObj["acknowledged"])
+                {
+                    flag = true;
+                }
+                else
+                {
+                    LogUtil.LogInfo(logger, resStr.DebugInformation, nodeId);
+                }
+            }
+            catch (Exception ex)
+            {
+                if (resStr != null)
+                    LogUtil.LogInfo(logger, resStr.DebugInformation, nodeId);
+                LogUtil.LogError(logger, ex.ToString(), nodeId);
+            }
+
+            return flag;
+        }
+
         /// <summary>
         /// 优化写入性能
         /// </summary>

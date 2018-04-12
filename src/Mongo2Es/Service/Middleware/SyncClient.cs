@@ -21,9 +21,12 @@ namespace Mongo2Es.Middleware
         private Mongo.MongoClient client;
         private readonly string database = "Mongo2Es";
         private readonly string collection = "SyncNode";
+        private readonly string[] opArr = new string[] { "i", "u", "d" };
         private System.Timers.Timer nodesRefreshTimer;
         private ConcurrentDictionary<string, SyncNode> scanNodesDic = new ConcurrentDictionary<string, SyncNode>();
         private ConcurrentDictionary<string, SyncNode> tailNodesDic = new ConcurrentDictionary<string, SyncNode>();
+
+        public SyncClient() { }
 
         public SyncClient(string mongoUrl)
         {
@@ -41,7 +44,7 @@ namespace Mongo2Es.Middleware
                 var nodes = client.GetCollectionData<SyncNode>(database, collection);
 
                 #region Scan
-                var scanNodes = nodes.Where(x=>(x.Status == SyncStatus.WaitForScan || x.Status == SyncStatus.ProcessScan) && x.Switch != SyncSwitch.Stop);
+                var scanNodes = nodes.Where(x => (x.Status == SyncStatus.WaitForScan || x.Status == SyncStatus.ProcessScan) && x.Switch != SyncSwitch.Stop);
                 var scanIds = scanNodes.Select(x => x.ID);
                 foreach (var node in scanNodes)
                 {
@@ -248,6 +251,8 @@ namespace Mongo2Es.Middleware
                     {
                         foreach (var opLog in cursor.ToEnumerable())
                         {
+                            if (!opArr.Contains(opLog["op"].AsString)) continue;
+
                             if (tailNodesDic.TryGetValue(node.ID, out SyncNode oldNode))
                             {
                                 node = oldNode;
@@ -602,5 +607,61 @@ namespace Mongo2Es.Middleware
             return doc.Names.Intersect(fieldsArr).ToList();
         }
         #endregion
+
+
+        public string GetMapping(string mongo, string db, string col, string projectfields, string linkfield, string es)
+        {
+            string mapping = "";
+
+            var index = $"temp{DateTime.Now.ToString("yyyyMMddHHmmss")}";
+            var esClient = new Mongo2Es.ElasticSearch.EsClient("System", es);
+            if (!esClient.IsIndexExsit(index))
+            {
+                if (esClient.CreateIndex(index))
+                {
+                    var mongoclient = new Mongo2Es.Mongo.MongoClient(mongo);
+                    var lastData = mongoclient.GetCollectionData<BsonDocument>(db, col, "{}", "{'_id':-1}", 1);
+
+                    var handDocs = new List<string>();
+                    foreach (var doc in lastData)
+                    {
+
+                        handDocs.Add(new
+                        {
+                            index = new
+                            {
+                                _id = doc["_id"].ToString()
+                            }
+                        }.ToJson());
+
+                        if (!string.IsNullOrWhiteSpace(linkfield))
+                        {
+                            doc.Remove(linkfield);
+                            doc.Remove("_id");
+                        }
+
+                        var newDoc = HandleDoc(doc, projectfields);
+
+                        if (string.IsNullOrWhiteSpace(linkfield))
+                            handDocs.Add(newDoc.ToJson(new JsonWriterSettings { OutputMode = JsonOutputMode.Strict }));
+                        else
+                            handDocs.Add(new { doc = newDoc }.ToJson(new JsonWriterSettings { OutputMode = JsonOutputMode.Strict }));
+                    }
+
+                    if (esClient.InsertBatchDocument(index, index, handDocs))
+                    {
+                        mapping = esClient.GetMapping(index).ToString();
+                    }
+                }
+
+                if (!esClient.DeleteIndex(index))
+                {
+                    mapping += $"索引{index}删除失败，请手动删除";
+                }
+            }
+
+
+            return mapping;
+        }
     }
 }

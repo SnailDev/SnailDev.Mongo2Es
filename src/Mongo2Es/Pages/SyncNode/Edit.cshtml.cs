@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using MongoDB.Bson;
 
 namespace Mongo2Es.Pages.SyncNode
 {
@@ -83,6 +84,23 @@ namespace Mongo2Es.Pages.SyncNode
             var cols = mongoclient.ListCollections(db);
 
             return new JsonResult(new { m = 0, d = cols, e = "" });
+        }
+
+        public IActionResult OnGetFields(string mongo, string db, string col)
+        {
+            var mongoclient = new Mongo2Es.Mongo.MongoClient(mongo);
+            var cols = mongoclient.ListFields(db, col);
+
+            return new JsonResult(new { m = 0, d = cols, e = "" });
+        }
+
+        public IActionResult OnGetMapping(string mongo, string db, string col, string projectfields, string linkfield, string es)
+        {
+            var client = new Mongo2Es.Middleware.SyncClient();
+            var mapping = client.GetMapping(mongo, db, col, projectfields, linkfield, es);
+
+
+            return new JsonResult(new { m = 0, d = mapping, e = "" });
         }
     }
 }

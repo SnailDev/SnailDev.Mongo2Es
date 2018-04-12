@@ -199,10 +199,10 @@ namespace Mongo2Es.Mongo
             //var collection = db.GetCollection<BsonDocument>("oplog.rs");
             var collection = GetCollection<BsonDocument>("local", "oplog.rs");
 
-            var op = BsonDocument.Parse($"{{$in: ['i','u','d']}}");
+            //var op = BsonDocument.Parse($"{{$in: ['i','u','d']}}");
             timestamp = timestamp ?? GetTimestampFromDateTime(DateTime.UtcNow);
             var ts = BsonDocument.Parse($"{{$gt: new Timestamp({timestamp},{inc ?? 1})}}");
-            var filterFunc = BsonDocument.Parse($"{{'ns':'{ns}','op':{op},'ts':{ts}}}");
+            var filterFunc = BsonDocument.Parse($"{{'ns':'{ns}','ts':{ts}}}"); //'op':{op},
             var sortFunc = BsonDocument.Parse("{$natural: 1}");
 
             var options = new FindOptions<BsonDocument>
