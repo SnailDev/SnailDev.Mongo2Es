@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Reflection;
 using System.Text;
 
 namespace Mongo2Es.Tests
@@ -15,6 +16,7 @@ namespace Mongo2Es.Tests
 
         static void Main(string[] args)
         {
+            //Console.WriteLine(Math.Round((decimal)2.135, 2, MidpointRounding.AwayFromZero));
             //string assemblyFolder = Directory.GetCurrentDirectory();
             //NLog.LogManager.Configuration = new NLog.Config.XmlLoggingConfiguration(Path.Combine(assemblyFolder, "NLog.config"), true);
             //logger.Info("Hello World");
@@ -26,7 +28,28 @@ namespace Mongo2Es.Tests
             //var bson = BsonDocument.Parse(@"{}");
             //string project = "";
             //var doc = HandleDoc(bson, project);
-            PostData(Encoding.Default.GetBytes("123"), Encoding.Default.GetBytes("123"));
+            //// PostData(Encoding.Default.GetBytes("123"), Encoding.Default.GetBytes("123"));
+
+            //var ac = new AC();
+            //ac.AB = new List<AB>() { new AB() { Text = "123", Value = "123" }, new AB() { Text = "234", Value = "234" } };
+            //Type type = ac.GetType();
+            //object obj = Activator.CreateInstance(type);
+            //PropertyInfo[] properties = ac.GetType().GetProperties();
+
+            //foreach (var proper in properties)
+            //{
+            //    if (proper.PropertyType.IsGenericType && proper.PropertyType.GetInterface("IEnumerable", false) != null)
+            //    {
+            //        var listObj = proper.GetValue(ac, null) as IEnumerable<object>;
+            //        foreach (object item in listObj)
+            //        {
+            //            // do reflex
+            //        }
+            //    }
+
+            //}
+
+
 
             Console.ReadLine();
         }
@@ -96,6 +119,20 @@ namespace Mongo2Es.Tests
             //        }
             //    };
         }
+
+        //public class AC
+        //{
+        //    public int ID { get; set; }
+        //    public string Name { get; set; }
+        //    public virtual List<AB> AB { get; set; }
+        //}
+
+        //public class AB
+        //{
+        //    public string Text { get; set; }
+        //    public string Value { get; set; }
+        //}
+
 
         /// <summary>
         /// 处理id
