@@ -8,8 +8,11 @@ namespace NEST.Repository.Tests
         {
             //Repository.Container.RepositoryContainer.Register<TestRepo>();
             //var testRepo = Repository.Container.RepositoryContainer.Resolve<TestRepo>();
-            Repository.Container.RepositoryContainer.Register<UserRepo>();
-            var userRepo = Repository.Container.RepositoryContainer.Resolve<UserRepo>();
+            //Repository.Container.RepositoryContainer.Register<UserRepo>();
+            //var userRepo = Repository.Container.RepositoryContainer.Resolve<UserRepo>();
+
+            Repository.Container.RepositoryContainer.Register<ActivityGiftRepo>();
+            var couponRepo = Repository.Container.RepositoryContainer.Resolve<ActivityGiftRepo>();
 
             //var test = testRepo.Get("5ab0df04b389d73dfe4c8f42");
             //var tests = testRepo.GetList(
@@ -21,19 +24,22 @@ namespace NEST.Repository.Tests
             //   skip: 0
             //   );
 
+            // f => f.MallID
+            var tests = couponRepo.GetList(filterExp: q => q.Term(i => i.Field(nameof(ActivityGift.MallID)).Value(42)));
 
-            // es里面的字段必须小写，否则查询会出现问题
-            var user = userRepo.Get(9);
-            var users = userRepo.GetList(
-                filterExp: q => +q.Range(r => r.Field(f => f.Age).GreaterThan(13).LessThan(28)), 
-                                // +q.Match(m => m.Field(f => f.Age).Query("13")), 
-                                // q => +q.Term(i => i.Field(f => f.Age).Value(13)),
-                includeFieldExp: p => p.Includes(i => i.Fields(f => f.Age, f => f.Sex, f => f.Like)),
-                sortExp: s => s.Age,
-                sortType: Nest.SortOrder.Ascending,
-                limit: 100,
-                skip: 0
-               );
+
+            //// es里面的字段必须小写，否则查询会出现问题
+            //var user = userRepo.Get(9); 
+            //var users = userRepo.GetList(
+            //    filterExp: q => +q.Range(r => r.Field(f => f.Age).GreaterThan(13).LessThan(28)), 
+            //                    // +q.Match(m => m.Field(f => f.Age).Query("13")), 
+            //                    // q => +q.Term(i => i.Field(f => f.Age).Value(13)),
+            //    includeFieldExp: p => p.Includes(i => i.Fields(f => f.Age, f => f.Sex, f => f.Like)),
+            //    sortExp: s => s.Age,
+            //    sortType: Nest.SortOrder.Ascending,
+            //    limit: 100,
+            //    skip: 0
+            //   );
 
             // fileterExp 写法：
             // q => q.Term(i => i.Field(f => f.Age).Value(13))

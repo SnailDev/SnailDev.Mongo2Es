@@ -455,7 +455,7 @@ namespace Mongo2Es.Middleware
             BsonDocument newDoc = new BsonDocument();
             if (doc.Contains("_id"))
             {
-                newDoc.Add(new BsonElement("id", HandleID(doc["_id"])));
+                newDoc.Add(new BsonElement("ID", HandleID(doc["_id"])));
             }
 
             foreach (var name in names)
@@ -465,21 +465,21 @@ namespace Mongo2Es.Middleware
                     var subProjectFields = string.Join(',', projectFields.Split(",").Where(s => s.StartsWith(name, StringComparison.CurrentCultureIgnoreCase)).ToList().ConvertAll(x => x.Contains(".") ? x.Substring(x.IndexOf(".") + 1).Trim() : null));
                     if (doc[name].IsBsonArray)
                     {
-                        newDoc.AddRange(new BsonDocument(name.ToLower(), HandleArray(doc[name].AsBsonArray, subProjectFields)));
+                        newDoc.AddRange(new BsonDocument(name, HandleArray(doc[name].AsBsonArray, subProjectFields)));
                     }
                     else if (doc[name].IsBsonDocument)
                     {
-                        newDoc.AddRange(new BsonDocument(name.ToLower(), HandleDoc(doc[name].AsBsonDocument, subProjectFields)));
+                        newDoc.AddRange(new BsonDocument(name, HandleDoc(doc[name].AsBsonDocument, subProjectFields)));
                     }
                     else
                     {
                         if (doc[name].IsBsonDateTime || doc[name].IsValidDateTime)
                         {
-                            newDoc.Add(new BsonElement(name.ToLower(), doc[name].ToString()));
+                            newDoc.Add(new BsonElement(name, doc[name].ToString()));
                         }
                         else
                         {
-                            newDoc.Add(new BsonElement(name.ToLower(), doc[name]));
+                            newDoc.Add(new BsonElement(name, doc[name]));
                         }
                     }
                 }
