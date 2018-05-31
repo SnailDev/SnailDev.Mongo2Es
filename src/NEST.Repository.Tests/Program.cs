@@ -11,8 +11,8 @@ namespace NEST.Repository.Tests
             //Repository.Container.RepositoryContainer.Register<UserRepo>();
             //var userRepo = Repository.Container.RepositoryContainer.Resolve<UserRepo>();
 
-            Repository.Container.RepositoryContainer.Register<ActivityGiftRepo>();
-            var couponRepo = Repository.Container.RepositoryContainer.Resolve<ActivityGiftRepo>();
+            Repository.Container.RepositoryContainer.Register<CouponLifeCycleRepo>();
+            var couponRepo = Repository.Container.RepositoryContainer.Resolve<CouponLifeCycleRepo>();
 
             //var test = testRepo.Get("5ab0df04b389d73dfe4c8f42");
             //var tests = testRepo.GetList(
@@ -25,9 +25,13 @@ namespace NEST.Repository.Tests
             //   );
 
             // f => f.MallID
-            var tests = couponRepo.GetList(filterExp: q => q.Term(i => i.Field(nameof(ActivityGift.MallID)).Value(42)));
+            var tests = couponRepo.GetList(filterFunc: q => q.Term(i => i.Field("MallID").Value(10008)));
 
+            var tests1 = couponRepo.GetList(filterFunc: q => q.Term(i => i.Field(f => f.MallID).Value(10008)));
+            //var tests1 = couponRepo.Get("59639443c0801209046d9a8e");
+            //var tests = couponRepo.GetList(filterExp: x => x.Mall == 10008, includeFieldExp: x => new { x.Mall });
 
+            Console.WriteLine("Hello World!");
             //// es里面的字段必须小写，否则查询会出现问题
             //var user = userRepo.Get(9); 
             //var users = userRepo.GetList(

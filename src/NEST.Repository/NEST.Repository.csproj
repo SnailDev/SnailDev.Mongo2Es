@@ -10,7 +10,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Translater\" />
+    <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
 
 </Project>

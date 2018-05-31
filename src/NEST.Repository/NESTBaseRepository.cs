@@ -1,8 +1,10 @@
 ﻿using Elasticsearch.Net;
 using Nest;
+using NEST.Repository.Translater;
 using Repository.IEntity;
 using System;
 using System.Linq;
+using System.Linq.Expressions;
 
 namespace NEST.Repository
 {
@@ -53,6 +55,23 @@ namespace NEST.Repository
 
             settings = settings.DefaultIndex(Index).DefaultTypeName(Type);
             client = new ElasticClient(settings);
+        }
+
+        public Func<SourceFilterDescriptor<TEntity>, ISourceFilter> IncludeFields(Expression<Func<TEntity, object>> fieldsExp)
+        {
+            var builder = Builders<TEntity>.Projection;
+
+            var body = (fieldsExp.Body as NewExpression);
+            if (body == null || body.Members == null)
+            {
+                throw new Exception("fieldsExp is invalid expression format， eg: x => new { x.Field1, x.Field2 }");
+            }
+            foreach (var m in body.Members)
+            {
+                builder = builder.Include(m.Name);
+            }
+
+            return x => builder.Project;
         }
     }
 }

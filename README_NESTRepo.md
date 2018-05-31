@@ -7,25 +7,39 @@ A simple encapsulation with NEST client for search data form elasticsearch.
 ### NESTReaderRepository
 ```csharp
 TEntity Get(TKey id);
-TEntity Get(Func<QueryContainerDescriptor<TEntity>, QueryContainer> filterExp = null,
-            Func<SourceFilterDescriptor<TEntity>, ISourceFilter> includeFieldExp = null,
+TEntity Get(Func<QueryContainerDescriptor<TEntity>, QueryContainer> filterFunc = null,
+            Func<SourceFilterDescriptor<TEntity>, ISourceFilter> includeFieldFunc = null,
             Expression<Func<TEntity, object>> sortExp = null, SortOrder sortType = SortOrder.Ascending);
-Tuple<long, List<TEntity>> GetList(Func<QueryContainerDescriptor<TEntity>, QueryContainer> filterExp = null,
-            Func<SourceFilterDescriptor<TEntity>, ISourceFilter> includeFieldExp = null,
+TEntity Get(Expression<Func<TEntity, bool>> filterExp = null,
+            Expression<Func<TEntity, object>> includeFieldExp = null,
+            Expression<Func<TEntity, object>> sortExp = null, SortOrder sortType = SortOrder.Ascending);
+Tuple<long, List<TEntity>> GetList(Func<QueryContainerDescriptor<TEntity>, QueryContainer> filterFunc = null,
+            Func<SourceFilterDescriptor<TEntity>, ISourceFilter> includeFieldFunc = null,
             Expression<Func<TEntity, object>> sortExp = null, SortOrder sortType = SortOrder.Ascending
-           , int limit = 10, int skip = 0)
+           , int limit = 10, int skip = 0);
+Tuple<long, List<TEntity>> GetList(Expression<Func<TEntity, bool>> filterExp = null,
+            Expression<Func<TEntity, object>> includeFieldExp = null,
+            Expression<Func<TEntity, object>> sortExp = null, SortOrder sortType = SortOrder.Ascending
+           , int limit = 10, int skip = 0);
 ```
 
 ### NESTReaderRepositoryAsync
 ```csharp
 Task<TEntity> GetAsync(TKey id);
-Task<TEntity> GetAsync(Func<QueryContainerDescriptor<TEntity>, QueryContainer> filterExp = null,
-            Func<SourceFilterDescriptor<TEntity>, ISourceFilter> includeFieldExp = null,
+Task<TEntity> GetAsync(Func<QueryContainerDescriptor<TEntity>, QueryContainer> filterFunc = null,
+            Func<SourceFilterDescriptor<TEntity>, ISourceFilter> includeFieldFunc = null,
             Expression<Func<TEntity, object>> sortExp = null, SortOrder sortType = SortOrder.Ascending);
-Task<Tuple<long, List<TEntity>>> GetListAsync(Func<QueryContainerDescriptor<TEntity>, QueryContainer> filterExp = null,
-            Func<SourceFilterDescriptor<TEntity>, ISourceFilter> includeFieldExp = null,
+Task<TEntity> GetAsync(Expression<Func<TEntity, bool>> filterExp = null,
+            Expression<Func<TEntity, object>> includeFieldExp = null,
+            Expression<Func<TEntity, object>> sortExp = null, SortOrder sortType = SortOrder.Ascending);
+Task<Tuple<long, List<TEntity>>> GetListAsync(Func<QueryContainerDescriptor<TEntity>, QueryContainer> filterFunc = null,
+            Func<SourceFilterDescriptor<TEntity>, ISourceFilter> includeFieldFunc = null,
             Expression<Func<TEntity, object>> sortExp = null, SortOrder sortType = SortOrder.Ascending
-           , int limit = 0, int skip = 0)
+           , int limit = 0, int skip = 0);
+Task<Tuple<long, List<TEntity>>> GetListAsync(Expression<Func<TEntity, bool>> filterExp = null,
+            Expression<Func<TEntity, object>> includeFieldExp = null,
+            Expression<Func<TEntity, object>> sortExp = null, SortOrder sortType = SortOrder.Ascending
+           , int limit = 10, int skip = 0)
 ```
 
 ## Depend on
@@ -76,8 +90,19 @@ Now, you can search data with simple api. eg
 
     var user = userRepo.Get(9);
     var users = userRepo.GetList(
-        filterExp: q => +q.Range(r => r.Field(f => f.Age).GreaterThan(13).LessThan(28)), 
-        includeFieldExp: p => p.Includes(i => i.Fields(f => f.Age, f => f.Sex, f => f.Like)),
+        filterFunc: q => +q.Range(r => r.Field(f => f.Age).GreaterThan(13).LessThan(28)),  // Entity Need Attribute
+		// filterFunc: q => +q.Range(r => r.Field("Age").GreaterThan(13).LessThan(28)),  // Entity Needn't Attribute
+        includeFieldFunc: p => p.Includes(i => i.Fields(f => f.Age, f => f.Sex, f => f.Like)),
+        sortExp: s => s.Age,
+        sortType: Nest.SortOrder.Ascending,
+        limit: 100,
+        skip: 0
+    );
+
+	// lambda expression. Haven't support BsonElement(Name)
+	var users = userRepo.GetList(
+        filterExp: x=> x.Age > 13 && x.Age < 28, 
+        includeFieldExp: x=> new { x.Age, x.Sex, x.Like },
         sortExp: s => s.Age,
         sortType: Nest.SortOrder.Ascending,
         limit: 100,
