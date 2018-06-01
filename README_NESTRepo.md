@@ -90,8 +90,8 @@ Now, you can search data with simple api. eg
 
     var user = userRepo.Get(9);
     var users = userRepo.GetList(
-        filterFunc: q => +q.Range(r => r.Field(f => f.Age).GreaterThan(13).LessThan(28)),  // Entity Need Attribute
-		// filterFunc: q => +q.Range(r => r.Field("Age").GreaterThan(13).LessThan(28)),  // Entity Needn't Attribute
+        filterFunc: q => +q.Range(r => r.Field(f => f.Age).GreaterThan(13).LessThan(28)), 
+		// filterFunc: q => +q.Range(r => r.Field("Age").GreaterThan(13).LessThan(28)),
         includeFieldFunc: p => p.Includes(i => i.Fields(f => f.Age, f => f.Sex, f => f.Like)),
         sortExp: s => s.Age,
         sortType: Nest.SortOrder.Ascending,
@@ -99,7 +99,7 @@ Now, you can search data with simple api. eg
         skip: 0
     );
 
-	// lambda expression. Haven't support BsonElement(Name)
+	// lambda expression. haven't support BsonElement(Name)
 	var users = userRepo.GetList(
         filterExp: x=> x.Age > 13 && x.Age < 28, 
         includeFieldExp: x=> new { x.Age, x.Sex, x.Like },

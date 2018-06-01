@@ -53,7 +53,9 @@ namespace NEST.Repository
             Type = type ?? typeof(TEntity).Name.ToLower();
 
 
-            settings = settings.DefaultIndex(Index).DefaultTypeName(Type);
+            settings = settings.DefaultIndex(Index)
+                        .DefaultTypeName(Type)
+                        .DefaultFieldNameInferrer(s => s); // By default, NEST camelcases all field names, this make no changes to the name
             client = new ElasticClient(settings);
         }
 
