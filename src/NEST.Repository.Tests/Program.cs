@@ -25,9 +25,12 @@ namespace NEST.Repository.Tests
             //   );
 
             // f => f.MallID
-            var tests = couponRepo.GetList(filterFunc: q => q.Term(i => i.Field("MallID").Value(10008)));
+            //var tests = couponRepo.GetList(filterFunc: q => q.Term(i => i.Field("MallID").Value(10008)));
 
-            var tests1 = couponRepo.GetList(filterFunc: q => q.Term(i => i.Field(f => f.MallID).Value(10008)));
+            //var tests1 = couponRepo.GetList(filterFunc: q => q.Term(i => i.Field(f => f.MallID).Value(10008)));
+
+            var tests2 = couponRepo.GetList(filterFunc: x => x.Term(m => m.Field(f => f.MallID).Value(10008)) && x.Term(m => m.Field("CVIID").Value(16168504)));
+
             //var tests1 = couponRepo.Get("59639443c0801209046d9a8e");
             //var tests = couponRepo.GetList(filterExp: x => x.Mall == 10008, includeFieldExp: x => new { x.Mall });
 

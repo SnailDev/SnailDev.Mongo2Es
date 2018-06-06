@@ -1,5 +1,7 @@
 ﻿using Elasticsearch.Net;
 using Nest;
+using Nest.JsonNetSerializer;
+using NEST.Repository.Serialization;
 using NEST.Repository.Translater;
 using Repository.IEntity;
 using System;
@@ -47,7 +49,7 @@ namespace NEST.Repository
 
             var uris = connString.Split(',').ToList().ConvertAll(x => new Uri(x));
             var connectionPool = new StaticConnectionPool(uris);
-            var settings = new ConnectionSettings(connectionPool);
+            var settings = new ConnectionSettings(connectionPool, sourceSerializer: (builtin, serializerSettings) => new CustomJsonNetSerializer(builtin, serializerSettings));
 
             Index = index ?? typeof(TEntity).Name.ToLower();
             Type = type ?? typeof(TEntity).Name.ToLower();

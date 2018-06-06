@@ -198,7 +198,7 @@ namespace NEST.Repository
         public async Task<Tuple<long, List<TEntity>>> GetListAsync(Func<QueryContainerDescriptor<TEntity>, QueryContainer> filterFunc = null,
             Func<SourceFilterDescriptor<TEntity>, ISourceFilter> includeFieldFunc = null,
             Expression<Func<TEntity, object>> sortExp = null, SortOrder sortType = SortOrder.Ascending
-           , int limit = 0, int skip = 0)
+           , int limit = 10, int skip = 0)
         {
             Func<SearchDescriptor<TEntity>, ISearchRequest> selector = null;
 
