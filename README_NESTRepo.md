@@ -111,6 +111,12 @@ Now, you can search data with simple api. eg
  }
 ```
 
+###
+Two places that need attention
+1. DataTime Field should use .ToUniversalTime() and format should be "yyyy-MM-ddTHH:mm:ss.000Z" in filterFunc.
+2. Sort Field should add .Suffix("keyword") in sortExp When the field is string type.
+
+
 ## How to write a Query
 ### 0x00. Structured Search
 >By default, documents will be returned in _score descending order, where the _score for each hit is the relevancy score calculated for how well the document matched the query criteria.

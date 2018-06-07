@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Nest;
+using System;
 
 namespace NEST.Repository.Tests
 {
@@ -29,7 +30,9 @@ namespace NEST.Repository.Tests
 
             //var tests1 = couponRepo.GetList(filterFunc: q => q.Term(i => i.Field(f => f.MallID).Value(10008)));
 
-            var tests2 = couponRepo.GetList(filterFunc: x => x.Term(m => m.Field(f => f.MallID).Value(10008)) && x.Term(m => m.Field("CVIID").Value(16168504)));
+            var tests2 = couponRepo.GetList(filterFunc: x => x.Term(m => m.Field(f => f.ID).Value("59639443c0801209046d9a8e")));
+
+            var result = couponRepo.GetList(filterExp: x => x.ID == "59639443c0801209046d9a8e", sortExp: y => y.ChangePeople.Suffix("keyword"), sortType: Nest.SortOrder.Descending);
 
             //var tests1 = couponRepo.Get("59639443c0801209046d9a8e");
             //var tests = couponRepo.GetList(filterExp: x => x.Mall == 10008, includeFieldExp: x => new { x.Mall });
