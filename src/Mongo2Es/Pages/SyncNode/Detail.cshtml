@@ -1,0 +1,139 @@
+﻿@page
+@model DetailModel
+@{
+    ViewData["Title"] ="SyncNode Detail";
+}
+
+<div class="page-header">
+    <h2>@ViewData["Title"]</h2>
+</div>
+
+<form class="form-horizontal" method="post">
+    <div asp-validation-summary="All"></div>
+    <input asp-for="Node.ID" type="hidden" />
+    <input asp-for="Node.Status" type="hidden" />
+    <input asp-for="Node.Switch" type="hidden" />
+    <input asp-for="Node.OperTailSign" type="hidden" />
+    <input asp-for="Node.OperTailSignExt" type="hidden" />
+    <input asp-for="Node.OperScanSign" type="hidden" />
+    <div class="form-group">
+        <label class="col-sm-2 control-label" asp-for="Node.Name"></label>
+        <div class="col-sm-3">
+            <input class="form-control" asp-for="Node.Name" />
+            <span asp-validation-for="Node.Name"></span>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-2 control-label" asp-for="Node.MongoUrl"></label>
+        <div class="col-sm-3">
+            <select class="form-control selectpicker" asp-items="@(new SelectList(Model.MongoNodes,"Url","Name"))" asp-for="Node.MongoUrl">
+                <option>Please select one</option>
+            </select>
+            <span asp-validation-for="Node.MongoUrl"></span>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-2 control-label" asp-for="Node.ParentDataBase"></label>
+        <div class="col-sm-3">
+            <input class="form-control" asp-for="Node.ParentDataBase" />
+            @*<select class="form-control" asp-for="Node.ParentDataBase" >
+                    <option>Please select one</option>
+                </select>*@
+            <span asp-validation-for="Node.ParentDataBase"></span>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-2 control-label" asp-for="Node.ParentCollection"></label>
+        <div class="col-sm-3">
+            <input class="form-control" asp-for="Node.ParentCollection" />
+            @*<select class="form-control" asp-for="Node.ParentCollection">
+                    <option>Please select one</option>
+                </select>*@
+            <span asp-validation-for="Node.ParentCollection"></span>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-2 control-label" asp-for="Node.ParentLinkField"></label>
+        <div class="col-sm-3">
+            <input readonly class="form-control" asp-for="Node.ParentLinkField" value="_id" />
+            <span asp-validation-for="Node.ParentLinkField"></span>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-2 control-label" asp-for="Node.DataBase"></label>
+        <div class="col-sm-3">
+            <input class="form-control" asp-for="Node.DataBase" />
+            @*<select class="form-control" asp-for="Node.DataBase">
+                    <option>Please select one</option>
+                </select>*@
+            <span asp-validation-for="Node.DataBase"></span>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-2 control-label" asp-for="Node.Collection"></label>
+        <div class="col-sm-3">
+            <input class="form-control" asp-for="Node.Collection" />
+            @*<select class="form-control" asp-for="Node.Collection">
+                    <option>Please select one</option>
+                </select>*@
+            <span asp-validation-for="Node.Collection"></span>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-2 control-label" asp-for="Node.LinkField"></label>
+        <div class="col-sm-3">
+            <input class="form-control" asp-for="Node.LinkField" />
+            <span asp-validation-for="Node.LinkField"></span>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-2 control-label" asp-for="Node.ProjectFields"></label>
+        <div class="col-sm-5">
+            <input class="form-control" asp-for="Node.ProjectFields" />(空为全部字段同步,_id字段默认包含,字段以英文,号间隔)
+            <span asp-validation-for="Node.ProjectFields"></span>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-2 control-label" asp-for="Node.EsUrl"></label>
+        <div class="col-sm-3">
+            <select class="form-control selectpicker" asp-items="@(new SelectList(Model.EsNodes,"Url","Name"))" asp-for="Node.EsUrl">
+                <option>Please select one</option>
+            </select>
+            <span asp-validation-for="Node.EsUrl"></span>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-2 control-label" asp-for="Node.Index"></label>
+        <div class="col-sm-3">
+            <input class="form-control" asp-for="Node.Index" />
+            <span asp-validation-for="Node.Index"></span>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-2 control-label" asp-for="Node.Type"></label>
+        <div class="col-sm-3">
+            <input class="form-control" asp-for="Node.Type" />
+            <span asp-validation-for="Node.Type"></span>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-2 control-label" asp-for="Node.Mapping"></label>
+        <div class="col-sm-6">
+            <textarea class="form-control" asp-for="Node.Mapping"  style="min-height:400px;"></textarea><a id="GetMapping" href="javascript:void(0);">点击获取</a>
+            <span asp-validation-for="Node.Mapping"></span>
+        </div>
+    </div>
+</form>
+

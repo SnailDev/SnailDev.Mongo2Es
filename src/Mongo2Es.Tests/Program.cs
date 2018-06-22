@@ -14,12 +14,24 @@ namespace Mongo2Es.Tests
     {
         private static Logger logger = LogManager.GetCurrentClassLogger();
 
+
         static void Main(string[] args)
         {
             //Console.WriteLine(Math.Round((decimal)2.135, 2, MidpointRounding.AwayFromZero));
             //string assemblyFolder = Directory.GetCurrentDirectory();
             //NLog.LogManager.Configuration = new NLog.Config.XmlLoggingConfiguration(Path.Combine(assemblyFolder, "NLog.config"), true);
-            //logger.Info("Hello World");
+            ////logger.Info("Hello World");
+            //try
+            //{
+            //    LogEventInfo logEvent = new LogEventInfo(NLog.LogLevel.Error, logger.Name, "测试");
+            //    logEvent.Properties["nodeid"] = "test";
+
+            //    logger.Log(logEvent);
+            //}
+            //catch (Exception ex)
+            //{
+            //    Console.WriteLine(ex);
+            //}
 
             //// 这种延迟方法会占用cpu
             //DateTime startTime = DateTime.Now;
