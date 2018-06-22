@@ -111,8 +111,7 @@ Now, you can search data with simple api. eg
  }
 ```
 
-###
-Two places that need attention
+### Two places that need attention
 1. DataTime Field should use .ToUniversalTime() and format should be "yyyy-MM-ddTHH:mm:ss.000Z" in filterFunc.
 2. Sort Field should add .Suffix("keyword") in sortExp When the field is string type.
 
