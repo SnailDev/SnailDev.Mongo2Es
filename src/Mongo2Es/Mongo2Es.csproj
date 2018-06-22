@@ -19,6 +19,7 @@
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="2.0.0" />
     <PackageReference Include="mongocsharpdriver" Version="2.5.0" />
     <PackageReference Include="Newtonsoft.Json" Version="11.0.1" />
+    <PackageReference Include="NLog.MailKit" Version="2.2.0" />
     <PackageReference Include="NLog.MongoDB.NetCore" Version="1.0.0" />
   </ItemGroup>
 
@@ -718,5 +719,11 @@
     <None Include="wwwroot\lib\jQuery\test\unit\wrap.js" />
     <None Include="wwwroot\lib\jQuery\test\xhtml.php" />
     <None Include="wwwroot\test.js" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="Pages\SyncNode\Detail.cshtml">
+      <Pack>$(IncludeRazorContentInPack)</Pack>
+    </Content>
   </ItemGroup>
 </Project>
