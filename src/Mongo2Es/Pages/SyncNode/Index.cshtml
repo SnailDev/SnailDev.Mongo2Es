@@ -26,7 +26,7 @@
         {
             <div class="panel panel-primary">
                 <div class="panel-heading">
-                    @node.Name @(!string.IsNullOrWhiteSpace(node.ParentDataBase) ? "(child)" : "")
+                   <a style="color:white;" asp-page="./Detail" asp-route-id="@node.ID"> @node.Name @(!string.IsNullOrWhiteSpace(node.ParentDataBase) ? "(child)" : "") </a>
                 </div>
                 <table class="table">
                     <tbody>

@@ -249,134 +249,141 @@ namespace Mongo2Es.Middleware
                 {
                     using (var cursor = mongoClient.TailMongoOpLogs($"{node.DataBase}.{node.Collection}", node.OperTailSign, node.OperTailSignExt))
                     {
-                        foreach (var opLog in cursor.ToEnumerable())
+                        try
                         {
-                            if (!opArr.Contains(opLog["op"].AsString)) continue;
-
-                            if (tailNodesDic.TryGetValue(node.ID, out SyncNode oldNode))
+                            foreach (var opLog in cursor.ToEnumerable())
                             {
-                                node = oldNode;
-                                if (node.Switch == SyncSwitch.Stoping)
+                                if (!opArr.Contains(opLog["op"].AsString)) continue;
+
+                                if (tailNodesDic.TryGetValue(node.ID, out SyncNode oldNode))
                                 {
+                                    node = oldNode;
+                                    if (node.Switch == SyncSwitch.Stoping)
+                                    {
+                                        node.Switch = SyncSwitch.Stop;
+                                        client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
+                                                            Update.Set("Switch", node.Switch).ToBsonDocument());
+                                        LogUtil.LogInfo(logger, $"增量同步节点({node.Name})已停止, tail线程停止", node.ID);
+                                        return;
+                                    }
+                                }
+
+                                bool flag = true;
+
+                                switch (opLog["op"].AsString)
+                                {
+                                    case "i":
+                                        var iid = string.IsNullOrWhiteSpace(node.LinkField) ? opLog["o"]["_id"].ToString() : opLog["o"][node.LinkField].ToString();
+                                        var idoc = IDocuemntHandle(opLog["o"].AsBsonDocument, node.ProjectFields);
+                                        if (idoc.Names.Count() > 0)
+                                        {
+                                            if (string.IsNullOrWhiteSpace(node.LinkField))
+                                            {
+                                                if (esClient.InsertDocument(node.Index, node.Type, iid, idoc))
+                                                    LogUtil.LogInfo(logger, $"文档（id:{iid}）写入ES成功", node.ID);
+                                                else
+                                                {
+                                                    flag = false;
+                                                    LogUtil.LogInfo(logger, $"文档（id:{iid}）写入ES失败", node.ID);
+                                                }
+                                            }
+                                            else
+                                            {
+                                                idoc.Remove("id");
+                                                if (esClient.UpdateDocument(node.Index, node.Type, iid, idoc))
+                                                    LogUtil.LogInfo(logger, $"文档（id:{iid}）更新ES成功", node.ID);
+                                                else
+                                                {
+                                                    flag = false;
+                                                    LogUtil.LogInfo(logger, $"文档（id:{iid}）更新ES失败", node.ID);
+                                                }
+                                            }
+                                        }
+                                        break;
+                                    case "u":
+                                        var uid = opLog["o2"]["_id"].ToString();
+                                        var udoc = opLog["o"].AsBsonDocument;
+
+                                        if (!string.IsNullOrWhiteSpace(node.LinkField))
+                                        {
+                                            var filter = opLog["o2"]["_id"].IsObjectId ? $"{{'_id':new ObjectId('{uid}')}}" : $"{{'_id':{uid}}}";
+                                            var dataDetail = mongoClient.GetCollectionData<BsonDocument>(node.DataBase, node.Collection, filter, limit: 1).FirstOrDefault();
+                                            if (dataDetail == null || !dataDetail.Contains(node.LinkField)) continue;
+                                            uid = dataDetail[node.LinkField].ToString();
+                                        }
+
+                                        if (udoc.Contains("$unset"))
+                                        {
+                                            var unsetdoc = udoc["$unset"].AsBsonDocument;
+                                            udoc.Remove("$unset");
+
+                                            var delFields = UnsetDocHandle(unsetdoc, node.ProjectFields);
+                                            if (delFields.Count > 0)
+                                            {
+                                                if (esClient.DeleteField(node.Index, node.Type, uid, delFields))
+                                                {
+                                                    LogUtil.LogInfo(logger, $"文档（id:{uid}）删除ES字段({string.Join(",", delFields)})成功", node.ID);
+                                                }
+                                                else
+                                                {
+                                                    flag = false;
+                                                    LogUtil.LogInfo(logger, $"文档（id:{uid}）删除ES字段({string.Join(",", delFields)})失败", node.ID);
+                                                    break;
+                                                }
+                                            }
+                                        }
+
+                                        udoc = UDocuemntHandle(udoc, node.ProjectFields);
+                                        if (udoc.Names.Count() > 0)
+                                        {
+                                            if (esClient.UpdateDocument(node.Index, node.Type, uid, udoc))
+                                                LogUtil.LogInfo(logger, $"文档（id:{uid}）更新ES成功", node.ID);
+                                            else
+                                            {
+                                                flag = false;
+                                                LogUtil.LogInfo(logger, $"文档（id:{uid}）更新ES失败", node.ID);
+                                            }
+                                        }
+
+                                        break;
+                                    case "d":
+                                        var did = opLog["o"]["_id"].ToString();
+                                        if (string.IsNullOrWhiteSpace(node.LinkField))
+                                        {
+                                            if (esClient.DeleteDocument(node.Index, node.Type, did))
+                                                LogUtil.LogInfo(logger, $"文档（id:{did}）删除ES成功", node.ID);
+                                            else
+                                            {
+                                                flag = false;
+                                                LogUtil.LogInfo(logger, $"文档（id:{did}）删除ES失败", node.ID);
+                                            }
+                                        }
+                                        break;
+                                    default:
+                                        break;
+                                }
+
+                                if (flag)
+                                {
+                                    node.OperTailSign = opLog["ts"].AsBsonTimestamp.Timestamp;
+                                    node.OperTailSignExt = opLog["ts"].AsBsonTimestamp.Increment;
+                                    client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
+                                    Update.Set("OperTailSign", node.OperTailSign).Set("OperTailSignExt", node.OperTailSignExt).ToBsonDocument());
+                                }
+                                else
+                                {
+                                    node.Status = SyncStatus.TailException;
                                     node.Switch = SyncSwitch.Stop;
                                     client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
-                                                        Update.Set("Switch", node.Switch).ToBsonDocument());
-                                    LogUtil.LogInfo(logger, $"增量同步节点({node.Name})已停止, tail线程停止", node.ID);
+                                                      Update.Set("Status", node.Status).Set("Switch", node.Switch).ToBsonDocument());
+
                                     return;
                                 }
                             }
-
-                            bool flag = true;
-
-                            switch (opLog["op"].AsString)
-                            {
-                                case "i":
-                                    var iid = string.IsNullOrWhiteSpace(node.LinkField) ? opLog["o"]["_id"].ToString() : opLog["o"][node.LinkField].ToString();
-                                    var idoc = IDocuemntHandle(opLog["o"].AsBsonDocument, node.ProjectFields);
-                                    if (idoc.Names.Count() > 0)
-                                    {
-                                        if (string.IsNullOrWhiteSpace(node.LinkField))
-                                        {
-                                            if (esClient.InsertDocument(node.Index, node.Type, iid, idoc))
-                                                LogUtil.LogInfo(logger, $"文档（id:{iid}）写入ES成功", node.ID);
-                                            else
-                                            {
-                                                flag = false;
-                                                LogUtil.LogInfo(logger, $"文档（id:{iid}）写入ES失败", node.ID);
-                                            }
-                                        }
-                                        else
-                                        {
-                                            idoc.Remove("id");
-                                            if (esClient.UpdateDocument(node.Index, node.Type, iid, idoc))
-                                                LogUtil.LogInfo(logger, $"文档（id:{iid}）更新ES成功", node.ID);
-                                            else
-                                            {
-                                                flag = false;
-                                                LogUtil.LogInfo(logger, $"文档（id:{iid}）更新ES失败", node.ID);
-                                            }
-                                        }
-                                    }
-                                    break;
-                                case "u":
-                                    var uid = opLog["o2"]["_id"].ToString();
-                                    var udoc = opLog["o"].AsBsonDocument;
-
-                                    if (!string.IsNullOrWhiteSpace(node.LinkField))
-                                    {
-                                        var filter = opLog["o2"]["_id"].IsObjectId ? $"{{'_id':new ObjectId('{uid}')}}" : $"{{'_id':{uid}}}";
-                                        var dataDetail = mongoClient.GetCollectionData<BsonDocument>(node.DataBase, node.Collection, filter, limit: 1).FirstOrDefault();
-                                        if (dataDetail == null || !dataDetail.Contains(node.LinkField)) continue;
-                                        uid = dataDetail[node.LinkField].ToString();
-                                    }
-
-                                    if (udoc.Contains("$unset"))
-                                    {
-                                        var unsetdoc = udoc["$unset"].AsBsonDocument;
-                                        udoc.Remove("$unset");
-
-                                        var delFields = UnsetDocHandle(unsetdoc, node.ProjectFields);
-                                        if (delFields.Count > 0)
-                                        {
-                                            if (esClient.DeleteField(node.Index, node.Type, uid, delFields))
-                                            {
-                                                LogUtil.LogInfo(logger, $"文档（id:{uid}）删除ES字段({string.Join(",", delFields)})成功", node.ID);
-                                            }
-                                            else
-                                            {
-                                                flag = false;
-                                                LogUtil.LogInfo(logger, $"文档（id:{uid}）删除ES字段({string.Join(",", delFields)})失败", node.ID);
-                                                break;
-                                            }
-                                        }
-                                    }
-
-                                    udoc = UDocuemntHandle(udoc, node.ProjectFields);
-                                    if (udoc.Names.Count() > 0)
-                                    {
-                                        if (esClient.UpdateDocument(node.Index, node.Type, uid, udoc))
-                                            LogUtil.LogInfo(logger, $"文档（id:{uid}）更新ES成功", node.ID);
-                                        else
-                                        {
-                                            flag = false;
-                                            LogUtil.LogInfo(logger, $"文档（id:{uid}）更新ES失败", node.ID);
-                                        }
-                                    }
-
-                                    break;
-                                case "d":
-                                    var did = opLog["o"]["_id"].ToString();
-                                    if (string.IsNullOrWhiteSpace(node.LinkField))
-                                    {
-                                        if (esClient.DeleteDocument(node.Index, node.Type, did))
-                                            LogUtil.LogInfo(logger, $"文档（id:{did}）删除ES成功", node.ID);
-                                        else
-                                        {
-                                            flag = false;
-                                            LogUtil.LogInfo(logger, $"文档（id:{did}）删除ES失败", node.ID);
-                                        }
-                                    }
-                                    break;
-                                default:
-                                    break;
-                            }
-
-                            if (flag)
-                            {
-                                node.OperTailSign = opLog["ts"].AsBsonTimestamp.Timestamp;
-                                node.OperTailSignExt = opLog["ts"].AsBsonTimestamp.Increment;
-                                client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
-                                Update.Set("OperTailSign", node.OperTailSign).Set("OperTailSignExt", node.OperTailSignExt).ToBsonDocument());
-                            }
-                            else
-                            {
-                                node.Status = SyncStatus.TailException;
-                                node.Switch = SyncSwitch.Stop;
-                                client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
-                                                  Update.Set("Status", node.Status).Set("Switch", node.Switch).ToBsonDocument());
-
-                                return;
-                            }
+                        }
+                        catch (MongoExecutionTimeoutException ex)
+                        {
+                            // Nohandle with MongoExecutionTimeoutException
                         }
                     }
                 }
