@@ -30,7 +30,16 @@ namespace NEST.Repository.Tests
 
             //var tests1 = couponRepo.GetList(filterFunc: q => q.Term(i => i.Field(f => f.MallID).Value(10008)));
 
-            var tests2 = couponRepo.GetList(filterFunc: x => x.Term(m => m.Field(f => f.ID).Value("59639443c0801209046d9a8e")));
+            var tests2 = couponRepo.GetList(filterFunc: x => x.Term(m => m.Field(f => f.ID).Value("5a0973bb04c1a69fd8166666")));
+
+            QueryContainerDescriptor<CouponLifeCycle> desc = new QueryContainerDescriptor<CouponLifeCycle>();
+            QueryContainer container = desc.Term(m => m.Field(f => f.ID).Value("5a0973bb04c1a69fd8166666"));
+            
+            container = container || desc.Term(i => i.Field("MallID").Value(10057));
+            //Func<QueryContainerDescriptor<CouponLifeCycle>, QueryContainer> filterFunc = x => container;
+
+            var tests3 = couponRepo.GetList(filterFunc: x => container);
+
 
             var result = couponRepo.GetList(filterExp: x => x.ID == "59639443c0801209046d9a8e", sortExp: y => y.ChangePeople.Suffix("keyword"), sortType: Nest.SortOrder.Descending);
 
