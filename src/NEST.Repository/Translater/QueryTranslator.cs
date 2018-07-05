@@ -29,7 +29,7 @@ namespace NEST.Repository.Translater
                     var name = propertyExpression.Member.Name;
                     Query = new QueryContainer(new QueryStringQuery()
                     {
-                        Fields = new Field(name),
+                        Fields = new Field(value is string ? $"{name}.keyword" : name),
                         Query = "*" + value + "*",
                         AnalyzeWildcard = true
                     });
@@ -116,7 +116,7 @@ namespace NEST.Repository.Translater
             {
                 var name = node.PropertyExpression.Member.Name;
                 var value = EvalValue(node.ValueExpression);
-                Query = new QueryContainer(new TermQuery() { Field = name, Value = value });
+                Query = new QueryContainer(new TermQuery() { Field = (value is string ? $"{name}.keyword" : name), Value = value });
                 return;
             }
 
@@ -129,7 +129,7 @@ namespace NEST.Repository.Translater
             {
                 var name = node.PropertyExpression.Member.Name;
                 var value = EvalValue(node.ValueExpression);
-                var q = new QueryContainer(new TermQuery() { Field = name, Value = value });
+                var q = new QueryContainer(new TermQuery() { Field = (value is string ? $"{name}.keyword" : name), Value = value });
                 Query = new QueryContainer(new BoolQuery { MustNot = new List<QueryContainer>() { q } });
                 return;
             }

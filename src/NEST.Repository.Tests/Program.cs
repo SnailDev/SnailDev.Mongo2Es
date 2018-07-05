@@ -41,7 +41,7 @@ namespace NEST.Repository.Tests
             var tests3 = couponRepo.GetList(filterFunc: x => container);
 
 
-            var result = couponRepo.GetList(filterExp: x => x.ID == "59639443c0801209046d9a8e", sortExp: y => y.ChangePeople.Suffix("keyword"), sortType: Nest.SortOrder.Descending);
+            var result = couponRepo.GetList(filterExp: x => x.ID == "5a0973bb04c1a69fd8166666", sortExp: y => y.ChangePeople.Suffix("keyword"), sortType: Nest.SortOrder.Descending);
 
             //var tests1 = couponRepo.Get("59639443c0801209046d9a8e");
             //var tests = couponRepo.GetList(filterExp: x => x.Mall == 10008, includeFieldExp: x => new { x.Mall });
