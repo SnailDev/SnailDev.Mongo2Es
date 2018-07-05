@@ -207,7 +207,7 @@ namespace NEST.Repository.Translater
         {
             if (containEqual)
             {
-                return new QueryContainer(new DateRangeQuery() { Field = fieldName, GreaterThanOrEqualTo = value.ToString() });
+                return new QueryContainer(new DateRangeQuery() { Field = fieldName, GreaterThanOrEqualTo = value.ToUniversalTime().ToString(DateTimeFormat) });
             }
 
             return new QueryContainer(new DateRangeQuery() { Field = fieldName, GreaterThan = value.ToUniversalTime().ToString(DateTimeFormat) });
@@ -217,7 +217,7 @@ namespace NEST.Repository.Translater
         {
             if (containEqual)
             {
-                return new QueryContainer(new DateRangeQuery() { Field = fieldName, LessThanOrEqualTo = value.ToString() });
+                return new QueryContainer(new DateRangeQuery() { Field = fieldName, LessThanOrEqualTo = value.ToUniversalTime().ToString(DateTimeFormat) });
             }
 
             return new QueryContainer(new DateRangeQuery() { Field = fieldName, LessThan = value.ToUniversalTime().ToString(DateTimeFormat) });
