@@ -384,6 +384,11 @@ namespace Mongo2Es.Middleware
                         catch (MongoExecutionTimeoutException ex)
                         {
                             // Nohandle with MongoExecutionTimeoutException
+                            if (node != null)
+                            {
+                                LogUtil.LogError(logger, $"同步({node.Name})节点异常：{ex}", node.ID);
+                                mongoClient = new Mongo.MongoClient(node.MongoUrl);
+                            }
                         }
                     }
                 }
