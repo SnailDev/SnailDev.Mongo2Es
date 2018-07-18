@@ -208,7 +208,7 @@ namespace Mongo2Es.Mongo
             var options = new FindOptions<BsonDocument>
             {
                 // Our cursor is a tailable cursor and informs the server to await
-                OplogReplay = true,
+                // OplogReplay = true,
                 CursorType = CursorType.TailableAwait,
                 NoCursorTimeout = true,
             };
