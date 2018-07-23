@@ -149,6 +149,14 @@ namespace Mongo2Es.Middleware
 
                 var filter = "{}";
                 var data = mongoClient.GetCollectionData<BsonDocument>(node.DataBase, node.Collection, filter, limit: 1);
+                if (node.IsLog && !String.IsNullOrWhiteSpace(node.OperScanSign))
+                {
+                    filter = data.Last()["_id"].IsObjectId ?
+                          $"{{'_id':{{ $gt:new ObjectId('{node.OperScanSign}')}}}}"
+                          : $"{{'_id':{{ $gt:{node.OperScanSign}}}}}";
+                    data = mongoClient.GetCollectionData<BsonDocument>(node.DataBase, node.Collection, filter, limit: 600);
+                }
+
                 while (data.Count() > 0)
                 {
                     if (esClient.InsertBatchDocument(node.Index, node.Type, IBatchDocuemntHandle(data, node.ProjectFields, node.LinkField)))
@@ -211,6 +219,16 @@ namespace Mongo2Es.Middleware
                 {
                     LogUtil.LogInfo(logger, $"ES 索引{node.Index}副本及刷新时间还原失败，可手动还原", node.ID);
                 }
+
+                //if (node.IsLog)
+                //{
+                //    // 记下当前Oplog的位置
+                //    currentOplog = mongoClient.GetCollectionData<BsonDocument>("local", "oplog.rs", "{}", "{$natural:-1}", 1).FirstOrDefault();
+                //    node.OperTailSign = currentOplog["ts"].AsBsonTimestamp.Timestamp;
+                //    node.OperTailSignExt = currentOplog["ts"].AsBsonTimestamp.Increment;
+                //    client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
+                //              Update.Set("OperTailSign", node.OperTailSign).Set("OperTailSignExt", node.OperTailSignExt).ToBsonDocument());
+                //}
 
                 node.Status = SyncStatus.WaitForTail;
                 client.UpdateCollectionData<SyncNode>(database, collection, node.ID,

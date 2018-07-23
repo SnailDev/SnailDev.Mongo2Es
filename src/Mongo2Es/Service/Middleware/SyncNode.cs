@@ -53,6 +53,11 @@ namespace Mongo2Es.Middleware
         public string Collection { get; set; }
 
         /// <summary>
+        /// 是否为日志(只插入不更新）
+        /// </summary>
+        public bool IsLog { get; set; }
+
+        /// <summary>
         /// 与父集合对应的链接字段
         /// </summary>
         public string LinkField { get; set; }
