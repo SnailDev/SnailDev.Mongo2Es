@@ -44,7 +44,9 @@ Task<Tuple<long, List<TEntity>>> GetListAsync(Expression<Func<TEntity, bool>> fi
 
 ## Depend on
 ```csharp
-NEST 6.0.2
+NEST 6.1.0
+Nest.JsonNetSerializer 6.1.0
+Elasticsearch.Net  6.1.0
 Repository.IEntity 2.0.1 (or you can write IEntity<T> interface and you entity inherit it.)
 ```
 
