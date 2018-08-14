@@ -6,7 +6,7 @@ namespace NEST.Repository.Tests
 {
     public class CardVoucherInfoRepo : NESTReaderRepository<CardVoucherInfo, long>
     {
-        public static string connString = "http://elasticsearch-t.mallcoo.cn/";
+        public static string connString = "http://localhost:9200/";
 
         public CardVoucherInfoRepo()
             : base(connString)

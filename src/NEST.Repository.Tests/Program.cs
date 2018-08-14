@@ -9,11 +9,12 @@ namespace NEST.Repository.Tests
         {
             //Repository.Container.RepositoryContainer.Register<TestRepo>();
             //var testRepo = Repository.Container.RepositoryContainer.Resolve<TestRepo>();
-            //Repository.Container.RepositoryContainer.Register<UserRepo>();
-            //var userRepo = Repository.Container.RepositoryContainer.Resolve<UserRepo>();
+            Repository.Container.RepositoryContainer.Register<UserRepo>();
+            var userRepo = Repository.Container.RepositoryContainer.Resolve<UserRepo>();
 
-            Repository.Container.RepositoryContainer.Register<CouponLifeCycleRepo>();
-            var couponRepo = Repository.Container.RepositoryContainer.Resolve<CouponLifeCycleRepo>();
+            CheckUser(userRepo);
+            //Repository.Container.RepositoryContainer.Register<CouponLifeCycleRepo>();
+            //var couponRepo = Repository.Container.RepositoryContainer.Resolve<CouponLifeCycleRepo>();
 
             //var test = testRepo.Get("5ab0df04b389d73dfe4c8f42");
             //var tests = testRepo.GetList(
@@ -30,23 +31,23 @@ namespace NEST.Repository.Tests
 
             //var tests1 = couponRepo.GetList(filterFunc: q => q.Term(i => i.Field(f => f.MallID).Value(10008)));
 
-            var tests2 = couponRepo.GetList(filterFunc: x => x.Term(m => m.Field(f => f.ID).Value("5a0973bb04c1a69fd8166666")));
+            //var tests2 = couponRepo.GetList(filterFunc: x => x.Term(m => m.Field(f => f.ID).Value("5a0973bb04c1a69fd8166666")));
 
-            QueryContainerDescriptor<CouponLifeCycle> desc = new QueryContainerDescriptor<CouponLifeCycle>();
-            QueryContainer container = desc.Term(m => m.Field(f => f.ID).Value("5a0973bb04c1a69fd8166666"));
-            
-            container = container || desc.Term(i => i.Field("MallID").Value(10057));
+            //QueryContainerDescriptor<CouponLifeCycle> desc = new QueryContainerDescriptor<CouponLifeCycle>();
+            //QueryContainer container = desc.Term(m => m.Field(f => f.ID).Value("5a0973bb04c1a69fd8166666"));
+
+            //container = container || desc.Term(i => i.Field("MallID").Value(10057));
             //Func<QueryContainerDescriptor<CouponLifeCycle>, QueryContainer> filterFunc = x => container;
 
-            var tests3 = couponRepo.GetList(filterFunc: x => container);
+            //var tests3 = couponRepo.GetList(filterFunc: x => container);
 
 
-            var result = couponRepo.GetList(filterExp: x => x.ID == "5a0973bb04c1a69fd8166666", sortExp: y => y.ChangePeople.Suffix("keyword"), sortType: Nest.SortOrder.Descending);
+            //var result = couponRepo.GetList(filterExp: x => x.ID == "5a0973bb04c1a69fd8166666", sortExp: y => y.ChangePeople.Suffix("keyword"), sortType: Nest.SortOrder.Descending);
 
             //var tests1 = couponRepo.Get("59639443c0801209046d9a8e");
             //var tests = couponRepo.GetList(filterExp: x => x.Mall == 10008, includeFieldExp: x => new { x.Mall });
 
-            Console.WriteLine("Hello World!");
+            // Console.WriteLine("Hello World!");
             //// es里面的字段必须小写，否则查询会出现问题
             //var user = userRepo.Get(9); 
             //var users = userRepo.GetList(
@@ -140,6 +141,12 @@ namespace NEST.Repository.Tests
 
             Console.WriteLine("Hello World!");
             Console.ReadLine();
+        }
+
+        static void CheckUser(UserRepo userRepo)
+        {
+            var users = userRepo.GetList(x => x.MallID == 10008, sortExp: x => x.ID, sortType: SortOrder.Ascending);
+            Console.WriteLine(users.Item1);
         }
     }
 }

@@ -14,10 +14,6 @@ namespace NEST.Repository.Tests
         [BsonId]
         public long ID { get; set; }
 
-        public double Age { get; set; }
-
-        public double Sex { get; set; }
-
-        public string Like { get; set; }
+        public long MallID { get; set; }
     }
 }

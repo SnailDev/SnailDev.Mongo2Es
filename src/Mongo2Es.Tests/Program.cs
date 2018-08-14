@@ -276,5 +276,31 @@ namespace Mongo2Es.Tests
             return bs;
         }
 
+
+        public abstract class ASSS
+        {
+            public void Say()
+            {
+                Method1();
+                Method2();
+            }
+
+            public abstract void Method1();
+            public abstract void Method2();
+
+        }
+
+        public class ASSS1 : ASSS
+        {
+            public override void Method1()
+            {
+                throw new NotImplementedException();
+            }
+
+            public override void Method2()
+            {
+                throw new NotImplementedException();
+            }
+        }
     }
 }
