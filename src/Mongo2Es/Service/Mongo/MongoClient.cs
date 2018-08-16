@@ -201,7 +201,7 @@ namespace Mongo2Es.Mongo
 
             //var op = BsonDocument.Parse($"{{$in: ['i','u','d']}}");
             timestamp = timestamp ?? GetTimestampFromDateTime(DateTime.UtcNow);
-            var ts = BsonDocument.Parse($"{{$gt: new Timestamp({timestamp},{inc ?? 1})}}");
+            var ts = BsonDocument.Parse($"{{$gte: new Timestamp({timestamp},{inc ?? 1})}}");
             var filterFunc = BsonDocument.Parse($"{{'ns':'{ns}','ts':{ts}}}"); //'op':{op},
             var sortFunc = BsonDocument.Parse("{$natural: 1}");
 
