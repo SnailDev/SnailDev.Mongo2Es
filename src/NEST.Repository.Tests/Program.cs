@@ -12,7 +12,6 @@ namespace NEST.Repository.Tests
             Repository.Container.RepositoryContainer.Register<UserRepo>();
             var userRepo = Repository.Container.RepositoryContainer.Resolve<UserRepo>();
 
-            CheckUser(userRepo);
             //Repository.Container.RepositoryContainer.Register<CouponLifeCycleRepo>();
             //var couponRepo = Repository.Container.RepositoryContainer.Resolve<CouponLifeCycleRepo>();
 
@@ -27,7 +26,9 @@ namespace NEST.Repository.Tests
             //   );
 
             // f => f.MallID
-            //var tests = couponRepo.GetList(filterFunc: q => q.Term(i => i.Field("MallID").Value(10008)));
+            var userList = userRepo.GetList(x => x.MallID == 10008);
+            userList = userRepo.GetList(x => x.MallID == 10008, sortExp: x => x.ID, sortType: SortOrder.Descending, skip: 31740, limit: 20);
+            userList = userRepo.GetList(x => x.MallID == 10008, skip: 31740);
 
             //var tests1 = couponRepo.GetList(filterFunc: q => q.Term(i => i.Field(f => f.MallID).Value(10008)));
 
@@ -141,12 +142,6 @@ namespace NEST.Repository.Tests
 
             Console.WriteLine("Hello World!");
             Console.ReadLine();
-        }
-
-        static void CheckUser(UserRepo userRepo)
-        {
-            var users = userRepo.GetList(x => x.MallID == 10008, sortExp: x => x.ID, sortType: SortOrder.Ascending);
-            Console.WriteLine(users.Item1);
         }
     }
 }
