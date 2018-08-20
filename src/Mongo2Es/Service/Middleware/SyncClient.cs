@@ -51,6 +51,7 @@ namespace Mongo2Es.Middleware
                     if (!scanNodesDic.ContainsKey(node.ID))
                     {
                         ThreadPool.QueueUserWorkItem(ExcuteScanProcess, node);
+                        LogUtil.LogInfo(logger, $"全量同步节点({node.Name})进入线程池", node.ID);
                     }
 
                     if (scanNodesDic.TryGetValue(node.ID, out SyncNode oldNode))
@@ -79,6 +80,7 @@ namespace Mongo2Es.Middleware
                     if (!tailNodesDic.ContainsKey(item.ID))
                     {
                         ThreadPool.QueueUserWorkItem(ExcuteTailProcess, item);
+                        LogUtil.LogInfo(logger, $"增量同步节点({item.Name})进入线程池", item.ID);
                     }
 
                     if (tailNodesDic.TryGetValue(item.ID, out SyncNode oldNode))
@@ -114,6 +116,8 @@ namespace Mongo2Es.Middleware
             var node = obj as SyncNode;
             var mongoClient = new Mongo.MongoClient(node.MongoUrl);
             var esClient = new EsClient(node.ID, node.EsUrl);
+
+            LogUtil.LogInfo(logger, $"全量同步({node.Name})节点开始", node.ID);
 
             try
             {
@@ -161,7 +165,7 @@ namespace Mongo2Es.Middleware
                 {
                     if (esClient.InsertBatchDocument(node.Index, node.Type, IBatchDocuemntHandle(data, node.ProjectFields, node.LinkField)))
                     {
-                        LogUtil.LogInfo(logger, $"文档(count:{data.Count()})写入ES成功", node.ID);
+                        LogUtil.LogInfo(logger, $"节点({node.Name}),文档(count:{data.Count()})写入ES成功", node.ID);
 
                         //if (string.IsNullOrWhiteSpace(node.OperScanSign))
                         //{
@@ -189,7 +193,7 @@ namespace Mongo2Es.Middleware
                     }
                     else
                     {
-                        LogUtil.LogInfo(logger, $"文档(count:{data.Count()})写入ES失败,需手动重置", node.ID);
+                        LogUtil.LogInfo(logger, $"节点({node.Name}),文档(count:{data.Count()})写入ES失败,需手动重置", node.ID);
                         node.Status = SyncStatus.ScanException;
                         node.Switch = SyncSwitch.Stop;
                         client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
@@ -245,6 +249,8 @@ namespace Mongo2Es.Middleware
 
                 LogUtil.LogError(logger, ex.ToString(), node.ID);
             }
+
+            LogUtil.LogInfo(logger, $"全量同步({node.Name})节点结束", node.ID);
         }
 
         /// <summary>
@@ -256,6 +262,8 @@ namespace Mongo2Es.Middleware
             var node = obj as SyncNode;
             var mongoClient = new Mongo.MongoClient(node.MongoUrl);
             var esClient = new EsClient(node.ID, node.EsUrl);
+
+            LogUtil.LogInfo(logger, $"增量同步({node.Name})节点开始", node.ID);
 
             try
             {
@@ -298,22 +306,22 @@ namespace Mongo2Es.Middleware
                                             if (string.IsNullOrWhiteSpace(node.LinkField))
                                             {
                                                 if (esClient.InsertDocument(node.Index, node.Type, iid, idoc))
-                                                    LogUtil.LogInfo(logger, $"文档（id:{iid}）写入ES成功", node.ID);
+                                                    LogUtil.LogInfo(logger, $"节点({node.Name}),文档（id:{iid}）写入ES成功", node.ID);
                                                 else
                                                 {
                                                     flag = false;
-                                                    LogUtil.LogInfo(logger, $"文档（id:{iid}）写入ES失败", node.ID);
+                                                    LogUtil.LogInfo(logger, $"节点({node.Name}),文档（id:{iid}）写入ES失败", node.ID);
                                                 }
                                             }
                                             else
                                             {
                                                 idoc.Remove("id");
                                                 if (esClient.UpdateDocument(node.Index, node.Type, iid, idoc))
-                                                    LogUtil.LogInfo(logger, $"文档（id:{iid}）更新ES成功", node.ID);
+                                                    LogUtil.LogInfo(logger, $"节点({node.Name}),文档（id:{iid}）更新ES成功", node.ID);
                                                 else
                                                 {
                                                     flag = false;
-                                                    LogUtil.LogInfo(logger, $"文档（id:{iid}）更新ES失败", node.ID);
+                                                    LogUtil.LogInfo(logger, $"节点({node.Name}),文档（id:{iid}）更新ES失败", node.ID);
                                                 }
                                             }
                                         }
@@ -340,12 +348,12 @@ namespace Mongo2Es.Middleware
                                             {
                                                 if (esClient.DeleteField(node.Index, node.Type, uid, delFields))
                                                 {
-                                                    LogUtil.LogInfo(logger, $"文档（id:{uid}）删除ES字段({string.Join(",", delFields)})成功", node.ID);
+                                                    LogUtil.LogInfo(logger, $"节点({node.Name}),文档（id:{uid}）删除ES字段({string.Join(",", delFields)})成功", node.ID);
                                                 }
                                                 else
                                                 {
                                                     flag = false;
-                                                    LogUtil.LogInfo(logger, $"文档（id:{uid}）删除ES字段({string.Join(",", delFields)})失败", node.ID);
+                                                    LogUtil.LogInfo(logger, $"节点({node.Name}),文档（id:{uid}）删除ES字段({string.Join(",", delFields)})失败", node.ID);
                                                     break;
                                                 }
                                             }
@@ -355,11 +363,11 @@ namespace Mongo2Es.Middleware
                                         if (udoc.Names.Count() > 0)
                                         {
                                             if (esClient.UpdateDocument(node.Index, node.Type, uid, udoc))
-                                                LogUtil.LogInfo(logger, $"文档（id:{uid}）更新ES成功", node.ID);
+                                                LogUtil.LogInfo(logger, $"节点({node.Name}),文档（id:{uid}）更新ES成功", node.ID);
                                             else
                                             {
                                                 flag = false;
-                                                LogUtil.LogInfo(logger, $"文档（id:{uid}）更新ES失败", node.ID);
+                                                LogUtil.LogInfo(logger, $"节点({node.Name}),文档（id:{uid}）更新ES失败", node.ID);
                                             }
                                         }
 
@@ -369,11 +377,11 @@ namespace Mongo2Es.Middleware
                                         if (string.IsNullOrWhiteSpace(node.LinkField))
                                         {
                                             if (esClient.DeleteDocument(node.Index, node.Type, did))
-                                                LogUtil.LogInfo(logger, $"文档（id:{did}）删除ES成功", node.ID);
+                                                LogUtil.LogInfo(logger, $"节点({node.Name}),文档（id:{did}）删除ES成功", node.ID);
                                             else
                                             {
                                                 flag = false;
-                                                LogUtil.LogInfo(logger, $"文档（id:{did}）删除ES失败", node.ID);
+                                                LogUtil.LogInfo(logger, $"节点({node.Name}),文档（id:{did}）删除ES失败", node.ID);
                                             }
                                         }
                                         break;
@@ -430,6 +438,8 @@ namespace Mongo2Es.Middleware
 
                 LogUtil.LogError(logger, $"同步({node.Name})节点异常：{ex}", node.ID);
             }
+
+            LogUtil.LogInfo(logger, $"增量同步({node.Name})节点结束", node.ID);
         }
 
         #region Doc Handle
