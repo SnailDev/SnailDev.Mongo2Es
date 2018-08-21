@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Mongo2Es.Middleware
 {
@@ -158,11 +159,13 @@ namespace Mongo2Es.Middleware
                     filter = data.Last()["_id"].IsObjectId ?
                           $"{{'_id':{{ $gt:new ObjectId('{node.OperScanSign}')}}}}"
                           : $"{{'_id':{{ $gt:{node.OperScanSign}}}}}";
-                    data = mongoClient.GetCollectionData<BsonDocument>(node.DataBase, node.Collection, filter, limit: 600);
+                    data = mongoClient.GetCollectionData<BsonDocument>(node.DataBase, node.Collection, filter, limit: 1000);
                 }
 
                 while (data.Count() > 0)
                 {
+                    //System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
+                    //sw.Start();
                     if (esClient.InsertBatchDocument(node.Index, node.Type, IBatchDocuemntHandle(data, node.ProjectFields, node.LinkField)))
                     {
                         LogUtil.LogInfo(logger, $"节点({node.Name}),文档(count:{data.Count()})写入ES成功", node.ID);
@@ -189,7 +192,7 @@ namespace Mongo2Es.Middleware
                         filter = data.Last()["_id"].IsObjectId ?
                             $"{{'_id':{{ $gt:new ObjectId('{node.OperScanSign}')}}}}"
                             : $"{{'_id':{{ $gt:{node.OperScanSign}}}}}";
-                        data = mongoClient.GetCollectionData<BsonDocument>(node.DataBase, node.Collection, filter, limit: 600);
+                        data = mongoClient.GetCollectionData<BsonDocument>(node.DataBase, node.Collection, filter, limit: 1000);
                     }
                     else
                     {
@@ -213,6 +216,9 @@ namespace Mongo2Es.Middleware
                             return;
                         }
                     }
+
+                    //sw.Stop();
+                    //LogUtil.LogInfo(logger, sw.ElapsedMilliseconds.ToString(), node.ID);
                 }
 
                 if (esClient.SetIndexRefreshAndReplia(node.Index))
@@ -265,6 +271,14 @@ namespace Mongo2Es.Middleware
 
             LogUtil.LogInfo(logger, $"增量同步({node.Name})节点开始", node.ID);
 
+            // 动态规划
+            int maxCount = 1000;
+            int minElapsedMilliseconds = 15;
+            int maxElapsedMilliseconds = 1500;
+            bool bulkSwitch = false;
+            DateTime lastDataTime = DateTime.Now;
+            List<EsData> esDatas = new List<EsData>();
+
             try
             {
                 node.Status = SyncStatus.ProcessTail;
@@ -277,6 +291,8 @@ namespace Mongo2Es.Middleware
                     {
                         try
                         {
+                            #region version 1
+                            /*
                             foreach (var opLog in cursor.ToEnumerable())
                             {
                                 if (!opArr.Contains(opLog["op"].AsString)) continue;
@@ -295,7 +311,6 @@ namespace Mongo2Es.Middleware
                                 }
 
                                 bool flag = true;
-
                                 switch (opLog["op"].AsString)
                                 {
                                     case "i":
@@ -405,7 +420,165 @@ namespace Mongo2Es.Middleware
 
                                     return;
                                 }
+                            }*/
+                            #endregion
+
+                            #region version now
+                            foreach (var opLog in cursor.ToEnumerable())
+                            {
+                                //LogUtil.LogInfo(logger, "开始", node.ID);                              
+                                //System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
+                                //sw.Start();
+
+                                if (tailNodesDic.TryGetValue(node.ID, out SyncNode oldNode))
+                                {
+                                    node = oldNode;
+                                    if (node.Switch == SyncSwitch.Stoping)
+                                    {
+                                        node.Switch = SyncSwitch.Stop;
+                                        client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
+                                                            Update.Set("Switch", node.Switch).ToBsonDocument());
+                                        LogUtil.LogInfo(logger, $"增量同步节点({node.Name})已停止, tail线程停止", node.ID);
+                                        return;
+                                    }
+                                }
+
+                                if (!opLog["ns"].AsString.Equals($"{node.DataBase}.{node.Collection}")) continue;
+                                if (!opArr.Contains(opLog["op"].AsString)) continue;
+                                switch (opLog["op"].AsString)
+                                {
+                                    case "i":
+                                        var iid = string.IsNullOrWhiteSpace(node.LinkField) ? opLog["o"]["_id"].ToString() : opLog["o"][node.LinkField].ToString();
+                                        var idoc = IDocuemntHandle(opLog["o"].AsBsonDocument, node.ProjectFields);
+                                        if (idoc.Names.Count() > 0)
+                                        {
+                                            if (!string.IsNullOrWhiteSpace(node.LinkField)) idoc.Remove("id");
+                                            esDatas.Add(new EsData()
+                                            {
+                                                Oper = "insert",
+                                                ID = iid,
+                                                Data = idoc,
+                                                Time = DateTime.Now
+                                            });
+                                        }
+                                        break;
+                                    case "u":
+                                        var uid = opLog["o2"]["_id"].ToString();
+                                        var udoc = opLog["o"].AsBsonDocument;
+
+                                        if (!string.IsNullOrWhiteSpace(node.LinkField))
+                                        {
+                                            var filter = opLog["o2"]["_id"].IsObjectId ? $"{{'_id':new ObjectId('{uid}')}}" : $"{{'_id':{uid}}}";
+                                            var dataDetail = mongoClient.GetCollectionData<BsonDocument>(node.DataBase, node.Collection, filter, limit: 1).FirstOrDefault();
+                                            if (dataDetail == null || !dataDetail.Contains(node.LinkField)) continue;
+                                            uid = dataDetail[node.LinkField].ToString();
+                                        }
+
+                                        if (udoc.Contains("$unset"))
+                                        {
+                                            var unsetdoc = udoc["$unset"].AsBsonDocument;
+                                            udoc.Remove("$unset");
+
+                                            var delFields = UnsetDocHandle(unsetdoc, node.ProjectFields);
+                                            if (delFields.Count > 0)
+                                            {
+                                                esDatas.Add(new EsData()
+                                                {
+                                                    Oper = "delFields",
+                                                    ID = uid,
+                                                    Data = delFields,
+                                                    Time = DateTime.Now
+                                                });
+                                            }
+                                        }
+
+                                        udoc = UDocuemntHandle(udoc, node.ProjectFields);
+                                        if (udoc.Names.Count() > 0)
+                                        {
+                                            esDatas.Add(new EsData()
+                                            {
+                                                Oper = "update",
+                                                ID = uid,
+                                                Data = udoc,
+                                                Time = DateTime.Now
+                                            });
+                                        }
+
+                                        break;
+                                    case "d":
+                                        var did = opLog["o"]["_id"].ToString();
+                                        if (string.IsNullOrWhiteSpace(node.LinkField))
+                                        {
+                                            esDatas.Add(new EsData()
+                                            {
+                                                Oper = "delete",
+                                                ID = did,
+                                                Time = DateTime.Now
+                                            });
+                                        }
+                                        break;
+                                    default:
+                                        break;
+                                }
+
+
+                                if (esDatas.Count > 0)
+                                {
+                                    if (bulkSwitch)
+                                    {
+                                        if (esDatas.Count > maxCount)
+                                        {
+
+                                        }
+                                        else if ((DateTime.Now - esDatas.First().Time).Milliseconds >= maxElapsedMilliseconds)
+                                        {
+                                            bulkSwitch = false;
+                                            LogUtil.LogInfo(logger, $"同步降级为单条同步", node.ID);
+                                        }
+                                        else
+                                        {
+                                            continue;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        if ((DateTime.Now - lastDataTime).Milliseconds <= minElapsedMilliseconds)
+                                        {
+                                            bulkSwitch = true;
+                                            LogUtil.LogInfo(logger, $"同步升级为批量同步", node.ID);
+                                        }
+                                    }
+
+                                    lastDataTime = DateTime.Now;
+                                    // bulk
+                                    if (esClient.InsertBatchDocument(node.Index, node.Type, BatchDocuemntHandle(esDatas)))
+                                    {
+                                        LogUtil.LogInfo(logger, $"节点({node.Name}),文档(count:{esDatas.Count})更新ES成功", node.ID);
+
+                                        esDatas.Clear();
+
+                                        node.OperTailSign = opLog["ts"].AsBsonTimestamp.Timestamp;
+                                        node.OperTailSignExt = opLog["ts"].AsBsonTimestamp.Increment;
+                                        client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
+                                        Update.Set("OperTailSign", node.OperTailSign).Set("OperTailSignExt", node.OperTailSignExt).ToBsonDocument());
+                                    }
+                                    else
+                                    {
+                                        LogUtil.LogInfo(logger, $"节点({node.Name}),文档(count:{esDatas.Count})更新ES失败,需手动重置", node.ID);
+                                        node.Status = SyncStatus.TailException;
+                                        node.Switch = SyncSwitch.Stop;
+                                        client.UpdateCollectionData<SyncNode>(database, collection, node.ID,
+                                                          Update.Set("Status", node.Status).Set("Switch", node.Switch).ToBsonDocument());
+
+                                        return;
+                                    }
+                                }
+
+                                //sw.Stop();
+                                //LogUtil.LogInfo(logger, sw.ElapsedMilliseconds.ToString(), node.ID);
+                                //LogUtil.LogInfo(logger, "结束", node.ID);
                             }
+                            #endregion
                         }
                         catch (MongoExecutionTimeoutException ex)
                         {
@@ -416,7 +589,7 @@ namespace Mongo2Es.Middleware
                                 mongoClient = new Mongo.MongoClient(node.MongoUrl);
                             }
                         }
-                        catch(MongoCommandException ex)
+                        catch (MongoCommandException ex)
                         {
                             // Nohandle with MongoExecutionTimeoutException
                             if (node != null)
@@ -626,6 +799,64 @@ namespace Mongo2Es.Middleware
         }
 
         /// <summary>
+        /// 批量操作文档处理
+        /// </summary>
+        /// <param name="esDatas"></param>
+        /// <returns></returns>
+        private List<string> BatchDocuemntHandle(IEnumerable<EsData> esDatas)
+        {
+            var handDocs = new List<string>();
+            foreach (var doc in esDatas)
+            {
+                switch (doc.Oper)
+                {
+                    case "insert":
+                        handDocs.Add(new
+                        {
+                            index = new
+                            {
+                                _id = doc.ID
+                            }
+                        }.ToJson());
+                        handDocs.Add((doc.Data as BsonDocument).ToJson(new JsonWriterSettings { OutputMode = JsonOutputMode.Strict }));
+                        break;
+                    case "delFields":
+                    case "update":
+                        handDocs.Add(new
+                        {
+                            update = new
+                            {
+                                _id = doc.ID
+                            }
+                        }.ToJson());
+                        if (doc.Oper.Equals("delFields"))
+                        {
+                            var fieldScripts = (doc.Data as List<string>).ConvertAll(x => $"ctx._source.remove(\"{x}\")");
+                            handDocs.Add(new { script = string.Join(";", fieldScripts) }.ToJson(new JsonWriterSettings { OutputMode = JsonOutputMode.Strict }));
+                        }
+                        else
+                        {
+                            handDocs.Add(new { doc = (doc.Data as BsonDocument) }.ToJson(new JsonWriterSettings { OutputMode = JsonOutputMode.Strict }));
+                        }
+                        break;
+                    case "delete":
+                        handDocs.Add(new
+                        {
+                            delete = new
+                            {
+                                _id = doc.ID
+                            }
+                        }.ToJson());
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            return handDocs;
+        }
+
+        /// <summary>
         /// 更新文档处理
         /// </summary>
         /// <param name="doc"></param>
@@ -650,6 +881,8 @@ namespace Mongo2Es.Middleware
         private List<string> UnsetDocHandle(BsonDocument doc, string projectFields)
         {
             projectFields = projectFields ?? "";
+            if (projectFields == "") return doc.Names.ToList();
+
             var fieldsArr = projectFields.Split(",").ToList().ConvertAll(x => x.Trim());
             // fieldsArr.Remove("_id");
 
@@ -657,6 +890,7 @@ namespace Mongo2Es.Middleware
         }
         #endregion
 
+        #region GetMapping
         public string GetMapping(string mongo, string db, string col, string projectfields, string linkfield, string es)
         {
             string mapping = "";
@@ -711,5 +945,6 @@ namespace Mongo2Es.Middleware
 
             return mapping;
         }
+        #endregion
     }
 }

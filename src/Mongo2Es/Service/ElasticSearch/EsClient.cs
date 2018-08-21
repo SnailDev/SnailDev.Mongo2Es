@@ -297,7 +297,11 @@ namespace Mongo2Es.ElasticSearch
             StringResponse resStr = null;
             try
             {
+                //System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
+                //sw.Start();
                 resStr = client.Bulk<StringResponse>(index, type, PostData.MultiJson(docs));
+                //sw.Stop();
+                //LogUtil.LogInfo(logger, sw.ElapsedMilliseconds.ToString(), nodeId);
                 var resObj = JObject.Parse(resStr.Body);
                 if (!(bool)resObj["errors"])
                 {

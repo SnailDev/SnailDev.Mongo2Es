@@ -202,13 +202,13 @@ namespace Mongo2Es.Mongo
             //var op = BsonDocument.Parse($"{{$in: ['i','u','d']}}");
             timestamp = timestamp ?? GetTimestampFromDateTime(DateTime.UtcNow);
             var ts = BsonDocument.Parse($"{{$gte: new Timestamp({timestamp},{inc ?? 1})}}");
-            var filterFunc = BsonDocument.Parse($"{{'ns':'{ns}','ts':{ts}}}"); //'op':{op},
+            var filterFunc = BsonDocument.Parse($"{{'ns':'{ns}', 'ts':{ts}}}"); //'ns':'{ns}', //'op':{op},
             var sortFunc = BsonDocument.Parse("{$natural: 1}");
 
             var options = new FindOptions<BsonDocument>
             {
                 // Our cursor is a tailable cursor and informs the server to await
-                // OplogReplay = true,
+                OplogReplay = true,
                 CursorType = CursorType.TailableAwait,
                 NoCursorTimeout = true,
             };
