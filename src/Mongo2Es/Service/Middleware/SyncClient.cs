@@ -526,11 +526,12 @@ namespace Mongo2Es.Middleware
                                 {
                                     if (bulkSwitch)
                                     {
+                                        LogUtil.LogInfo(logger, (DateTime.Now - esDatas.First().Time).TotalMilliseconds.ToString(), node.ID);
                                         if (esDatas.Count > maxCount)
                                         {
 
                                         }
-                                        else if ((DateTime.Now - esDatas.First().Time).Milliseconds >= maxElapsedMilliseconds)
+                                        else if ((DateTime.Now - esDatas.First().Time).TotalMilliseconds >= maxElapsedMilliseconds)
                                         {
                                             bulkSwitch = false;
                                             LogUtil.LogInfo(logger, $"同步降级为单条同步", node.ID);
@@ -542,7 +543,7 @@ namespace Mongo2Es.Middleware
                                     }
                                     else
                                     {
-                                        if ((DateTime.Now - lastDataTime).Milliseconds <= minElapsedMilliseconds)
+                                        if ((DateTime.Now - lastDataTime).TotalMilliseconds <= minElapsedMilliseconds)
                                         {
                                             bulkSwitch = true;
                                             LogUtil.LogInfo(logger, $"同步升级为批量同步", node.ID);
