@@ -273,8 +273,8 @@ namespace Mongo2Es.Middleware
 
             // 动态规划
             int maxCount = 1000;
-            int minElapsedMilliseconds = 15;
-            int maxElapsedMilliseconds = 1500;
+            int minElapsedMilliseconds = 150;
+            int maxElapsedMilliseconds = 3500;
             bool bulkSwitch = false;
             DateTime lastDataTime = DateTime.Now;
             List<EsData> esDatas = new List<EsData>();
@@ -534,7 +534,7 @@ namespace Mongo2Es.Middleware
                                         else if ((DateTime.Now - esDatas.First().Time).TotalMilliseconds >= maxElapsedMilliseconds)
                                         {
                                             bulkSwitch = false;
-                                            LogUtil.LogInfo(logger, $"同步降级为单条同步", node.ID);
+                                            LogUtil.LogInfo(logger, $"节点{node.Name}增量同步降级为单条同步", node.ID);
                                         }
                                         else
                                         {
@@ -546,7 +546,7 @@ namespace Mongo2Es.Middleware
                                         if ((DateTime.Now - lastDataTime).TotalMilliseconds <= minElapsedMilliseconds)
                                         {
                                             bulkSwitch = true;
-                                            LogUtil.LogInfo(logger, $"同步升级为批量同步", node.ID);
+                                            LogUtil.LogInfo(logger, $"节点{node.Name}增量同步升级为批量同步", node.ID);
                                         }
                                     }
 
