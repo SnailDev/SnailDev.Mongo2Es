@@ -526,7 +526,7 @@ namespace Mongo2Es.Middleware
                                 {
                                     if (bulkSwitch)
                                     {
-                                        LogUtil.LogInfo(logger, (DateTime.Now - esDatas.First().Time).TotalMilliseconds.ToString(), node.ID);
+                                        //LogUtil.LogInfo(logger, (DateTime.Now - esDatas.First().Time).TotalMilliseconds.ToString(), node.ID);
                                         if (esDatas.Count > maxCount)
                                         {
 

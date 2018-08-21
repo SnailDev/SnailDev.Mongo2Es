@@ -29,7 +29,8 @@ namespace Mongo2Es.DataChecker
             // CheckUserData();
             // CheckMallCardData();
             // CheckMallCardData_New();
-            CheckCardVoucherInfoData();
+            // CheckCardVoucherInfoData();
+            InsertUserTestData();
 
             Console.WriteLine("Hello World!");
             Console.ReadLine();
@@ -120,7 +121,6 @@ namespace Mongo2Es.DataChecker
             }
         }
 
-
         static void CheckMallCardData_New()
         {
             var mallEsRepo = RepositoryContainer.Resolve<MallCardRepo>();
@@ -142,7 +142,7 @@ namespace Mongo2Es.DataChecker
 
             while (mallsInEs.Item1 > 0)
             {
-                Console.WriteLine("获取数据数目：{0}", mallsInEs.Item1);               
+                Console.WriteLine("获取数据数目：{0}", mallsInEs.Item1);
 
                 sw.Restart();
                 var mallsInMongo = mallMongoRepo.Count(x => x.ID >= startIdInMongo && x.ID < endIdInMongo);
@@ -154,7 +154,7 @@ namespace Mongo2Es.DataChecker
                 if (mallsInEs.Item1 != mallsInMongo)
                 {
                     Console.WriteLine("区间：{0}~{1}数据不一致", startIdInEs, endIdInEs);
-                    Console.WriteLine("差异：{0}", mallsInEs.Item1- mallsInMongo);
+                    Console.WriteLine("差异：{0}", mallsInEs.Item1 - mallsInMongo);
                 }
 
                 startIdInEs = endIdInEs;
@@ -222,6 +222,32 @@ namespace Mongo2Es.DataChecker
                 sw.Stop();
                 Console.WriteLine("查询es耗时：{0}", sw.ElapsedMilliseconds);
             }
+        }
+
+        static void InsertUserTestData()
+        {
+            List<User> users = new List<User>();
+            long[] mallIds = { 10000, 10001, 10002, 10003, 10010 };
+            string[] names = { "xiaoming", "xiaohong", "xiaojun", "xiaoxiong" };
+            for (int i = 100000; i < 200000; i++)
+            {
+                users.Add(new User()
+                {
+                    ID = i,
+                    MallID = mallIds[i % 5],
+                    UserName = names[i % 4],
+                    Password = "123456"
+                });
+            }
+
+            var userMongoRepo = MongoDB.Repository.RepositoryContainer.Resolve<UserMongoRepo>();
+            //userMongoRepo.InsertBatch(users);
+
+            userMongoRepo.UpdateMany(x => x.MallID == 10001, x => x.Set(f => f.Password, "234567"));
+
+            //userMongoRepo.DeleteMany(x => x.MallID == 10010);
+
+            //userMongoRepo.UpdateMany(x => x.MallID == 10002, x => x.Unset(f => f.UserName));
         }
     }
 }
