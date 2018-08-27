@@ -1,5 +1,8 @@
 ﻿using Nest;
+using NEST.Repository.Serialization;
+using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
 
 namespace NEST.Repository.Tests
 {
@@ -7,6 +10,19 @@ namespace NEST.Repository.Tests
     {
         static void Main(string[] args)
         {
+
+            string datestr = "{'date':'0001-01-01T00:00:00Z','date1':'2018-01-01T00:00:00Z'}";
+
+            var obj = JsonConvert.DeserializeObject<HaHa>(datestr, new JsonSerializerSettings()
+            {
+                NullValueHandling = NullValueHandling.Include,
+                DateTimeZoneHandling = DateTimeZoneHandling.Local,
+                Converters = { new CustomDateTimeJsonConverter() }
+            });
+
+            Console.WriteLine(DateTime.Parse("0001-01-01T00:00:00Z").ToLocalTime());
+
+
             //Repository.Container.RepositoryContainer.Register<TestRepo>();
             //var testRepo = Repository.Container.RepositoryContainer.Resolve<TestRepo>();
             Repository.Container.RepositoryContainer.Register<UserRepo>();
@@ -144,4 +160,12 @@ namespace NEST.Repository.Tests
             Console.ReadLine();
         }
     }
+}
+
+public class HaHa
+{
+    //[JsonConverter(typeof(CustomDateTimeJsonConverter))]
+    public DateTime date { get; set; }
+
+    public DateTime date1 { get; set; }
 }
