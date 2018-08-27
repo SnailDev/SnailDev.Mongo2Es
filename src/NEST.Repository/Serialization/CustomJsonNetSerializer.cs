@@ -23,7 +23,8 @@ namespace NEST.Repository.Serialization
             new JsonSerializerSettings
             {
                 NullValueHandling = NullValueHandling.Include,
-                DateTimeZoneHandling = DateTimeZoneHandling.Local
+                DateTimeZoneHandling = DateTimeZoneHandling.Local,
+                Converters = { new CustomDateTimeJsonConverter() }
             };
 
         //protected override void ModifyContractResolver(ConnectionSettingsAwareContractResolver resolver) =>
