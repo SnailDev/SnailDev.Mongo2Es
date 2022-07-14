@@ -6,7 +6,7 @@ namespace NEST.Repository.Tests
 {
     public class UserRepo : NESTReaderRepository<User, long>
     {
-        public static string connString = "http://elasticsearch-t.mallcoo.cn/";
+        public static string connString = "http://xxxxx/";
 
         public UserRepo()
             : base(connString)
